@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ticketing_db
+      POSTGRES_USER: ticketing_user
+      POSTGRES_PASSWORD: example_password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://ticketing_user:example_password@db:5432/ticketing_db
+      JWT_ACCESS_SECRET: change_me_access_secret
+      JWT_REFRESH_SECRET: change_me_refresh_secret
+      APP_URL: http://localhost
+      NODE_ENV: production
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/uploads:/usr/src/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  db_data:
