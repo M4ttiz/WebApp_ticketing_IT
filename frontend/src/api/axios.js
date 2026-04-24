@@ -56,8 +56,8 @@ api.interceptors.response.use(
       } catch (e) {
         processQueue(e, null)
         setAccessToken(null)
-        window.location.href = '/login'
-        return Promise.reject(e)
+	if (window.location.pathname !== '/login') {window.location.href = '/login'}        
+		return Promise.reject(e)
       } finally {
         isRefreshing = false
       }

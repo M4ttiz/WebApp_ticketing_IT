@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   db:
     image: postgres:15
@@ -6,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ticketing_db
       POSTGRES_USER: ticketing_user
-      POSTGRES_PASSWORD: example_password
+      POSTGRES_PASSWORD: Ticket2026!!
     volumes:
       - db_data:/var/lib/postgresql/data
 
@@ -16,10 +15,10 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://ticketing_user:example_password@db:5432/ticketing_db
-      JWT_ACCESS_SECRET: change_me_access_secret
-      JWT_REFRESH_SECRET: change_me_refresh_secret
-      APP_URL: http://localhost
+      DATABASE_URL: postgres://ticketing_user:Ticket2026!!@db:5432/ticketing_db
+      JWT_ACCESS_SECRET: Ticket2026!!_access_jwt_secret_super_sicuro
+      JWT_REFRESH_SECRET: Ticket2026!!_refresh_jwt_secret_diverso
+      APP_URL: http://192.168.50.39
       NODE_ENV: production
     depends_on:
       - db
@@ -32,6 +31,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://192.168.50.39
     restart: unless-stopped
     depends_on:
       - backend
