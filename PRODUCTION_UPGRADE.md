@@ -34,15 +34,26 @@ cp .env .env.backup
 
 ---
 
-## 2. Aggiornamento codice
+## 2. Aggiornamento codice (branch `update_master`)
 
-### 2.1 Scarica il nuovo codice
-Se usi Git:
+### 2.1 Scarica il nuovo codice dal branch `update_master`
 ```bash
-git pull origin main
+# Se il branch remoto esiste già
+git fetch origin
+git checkout -b update_master origin/update_master
+
+# Se il branch NON esiste ancora sul server remoto (es. stai aggiornando manualmente)
+# git checkout -b update_master
+# poi copia/sovrascrivi i file aggiornati nella directory del progetto
 ```
 
-Oppure se usi un archivio, estrai i file sovrascrivendo quelli esistenti (escludendo `.env` e `docker-compose.yml` se li hai personalizzati).
+> **Nota**: Questo refactor è stato sviluppato e commitato sul branch `update_master`. In produzione fai checkout di questo branch specifico, non di `main`.
+
+### 2.2 Verifica di essere sul branch corretto
+```bash
+git branch
+# Deve mostrare: * update_master
+```
 
 ### 2.2 Copia lo script di migrazione SQL nel container DB
 Il file `backend/prisma/migrations/refactor_enums/migration.sql` contiene la migrazione sicura.
@@ -123,8 +134,8 @@ docker-compose down
 docker-compose up -d db  # avvia solo il DB
 docker-compose exec -T db psql -U ticketing_user -d ticketing_db < backup_YYYYMMDD_HHMMSS.sql
 
-# Torna al codice vecchio (git checkout o ripristina i file)
-git checkout HEAD~1  # oppure il commit/tag precedente
+# Torna al codice vecchio (branch precedente, es. main o fix/docker-deployment-config)
+git checkout main  # oppure il nome del tuo branch stabile precedente
 
 # Riavvia con la vecchia versione
 docker-compose up -d --build
