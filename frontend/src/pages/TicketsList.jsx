@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 export default function TicketsList(){
   const [tickets, setTickets] = useState([])
 
-  useEffect(()=>{ api.get('/api/tickets').then(r=>setTickets(r.data.tickets)).catch(()=>{}) }, [])
+  useEffect(()=>{ api.get('/tickets').then(r=>setTickets(r.data.tickets)).catch(()=>{}) }, [])
 
   return (
     <div>

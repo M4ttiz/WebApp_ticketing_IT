@@ -4,7 +4,7 @@ import api from '../api/axios'
 export default function Profile(){
   const [profile, setProfile] = useState(null)
 
-  useEffect(()=>{ api.get('/api/users/me').then(r=>setProfile(r.data)).catch(()=>{}) }, [])
+  useEffect(()=>{ api.get('/users/me').then(r=>setProfile(r.data)).catch(()=>{}) }, [])
 
   if (!profile) return <div>Loading...</div>
 

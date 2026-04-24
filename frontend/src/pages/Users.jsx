@@ -4,7 +4,7 @@ import api from '../api/axios'
 export default function Users(){
   const [users, setUsers] = useState([])
 
-  useEffect(()=>{ api.get('/api/users').then(r=>setUsers(r.data.users)).catch(()=>{}) }, [])
+  useEffect(()=>{ api.get('/users').then(r=>setUsers(r.data.users)).catch(()=>{}) }, [])
 
   return (
     <div>

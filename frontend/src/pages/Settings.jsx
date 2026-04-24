@@ -6,17 +6,17 @@ export default function Settings(){
   const [msg, setMsg] = useState('')
 
   useEffect(()=>{
-    api.get('/api/settings/smtp').then(r=>setConfig(r.data)).catch(()=>{})
+    api.get('/settings/smtp').then(r=>setConfig(r.data)).catch(()=>{})
   },[])
 
   const save = async () => {
-    await api.put('/api/settings/smtp', config)
+    await api.put('/settings/smtp', config)
     setMsg('Salvato')
   }
 
   const test = async () => {
     try {
-      await api.post('/api/settings/smtp/test', config)
+      await api.post('/settings/smtp/test', config)
       setMsg('Connessione SMTP OK')
     } catch (e) { setMsg('Test fallito: ' + e.message) }
   }

@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
     // Try refresh on mount
     async function init() {
       try {
-        const res = await api.post('/api/auth/refresh')
+        const res = await api.post('/auth/refresh')
         const token = res.data.accessToken
         setAccessToken(token)
         setUser(res.data.user)
@@ -26,14 +26,14 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async (email, password) => {
-    const res = await api.post('/api/auth/login', { email, password })
+    const res = await api.post('/auth/login', { email, password })
     setAccessToken(res.data.accessToken)
     setUser(res.data.user)
     return res.data
   }
 
   const logout = async () => {
-    await api.post('/api/auth/logout')
+    await api.post('/auth/logout')
     setAccessToken(null)
     setUser(null)
     window.location.href = '/login'

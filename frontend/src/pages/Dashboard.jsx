@@ -7,8 +7,8 @@ export default function Dashboard(){
   const [charts, setCharts] = useState(null)
 
   useEffect(()=>{
-    api.get('/api/dashboard/stats').then(r=>setStats(r.data)).catch(()=>{})
-    api.get('/api/dashboard/charts').then(r=>setCharts(r.data)).catch(()=>{})
+    api.get('/dashboard/stats').then(r=>setStats(r.data)).catch(()=>{})
+    api.get('/dashboard/charts').then(r=>setCharts(r.data)).catch(()=>{})
   },[])
 
   return (

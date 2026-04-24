@@ -11,7 +11,7 @@ export default function NewTicket(){
   const [files, setFiles] = useState(null)
   const navigate = useNavigate()
 
-  useEffect(()=>{ api.get('/api/categories').then(r=>setCategories(r.data)).catch(()=>{}) }, [])
+  useEffect(()=>{ api.get('/categories').then(r=>setCategories(r.data)).catch(()=>{}) }, [])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -23,7 +23,7 @@ export default function NewTicket(){
     if (files) {
       for (const f of files) form.append('attachments', f)
     }
-    const res = await api.post('/api/tickets', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const res = await api.post('/tickets', form, { headers: { 'Content-Type': 'multipart/form-data' } })
     navigate(`/tickets/${res.data.id}`)
   }
 

@@ -9,13 +9,13 @@ export default function TicketDetail(){
   const [content, setContent] = useState('')
 
   useEffect(()=>{
-    api.get(`/api/tickets/${id}`).then(r=>setTicket(r.data)).catch(()=>{})
-    api.get(`/api/tickets/${id}/messages`).then(r=>setMessages(r.data)).catch(()=>{})
+    api.get(`/tickets/${id}`).then(r=>setTicket(r.data)).catch(()=>{})
+    api.get(`/tickets/${id}/messages`).then(r=>setMessages(r.data)).catch(()=>{})
   }, [id])
 
   const send = async () => {
     if (!content) return
-    const res = await api.post(`/api/tickets/${id}/messages`, { content })
+    const res = await api.post(`/tickets/${id}/messages`, { content })
     setMessages(prev => [...prev, res.data])
     setContent('')
   }
