@@ -1,13 +1,22 @@
 // ============================================
-// Ticket Controller — CRUD, assign, messages, history
+// Ticket Controller — CRUD, assign, messages, comments, history, audit log
 // ============================================
 
 const prisma = require('../lib/prisma');
-const { generateTicketNumber, logTicketHistory } = require('../services/ticket.service');
+const { generateTicketNumber } = require('../services/ticket.service');
 const { sendEmail } = require('../services/email.service');
 const emailTemplates = require('../utils/emailTemplates');
 const { NotFoundError, ForbiddenError, AppError } = require('../utils/errors');
 
+// ─── Allowed state transitions ─────────────
+const ALLOWED_TRANSITIONS = {
+  APERTO: ['IN_LAVORAZIONE', 'RIFIUTATO'],
+  IN_LAVORAZIONE: ['IN_ATTESA', 'RISOLTO'],
+  IN_ATTESA: ['IN_LAVORAZIONE', 'CHIUSO'],
+  RISOLTO: ['CHIUSO', 'APERTO'],
+  CHIUSO: [],
+  RIFIUTATO: [],
+};
 
 // ─── Shared includes for ticket queries ────
 const ticketIncludes = {
@@ -17,9 +26,23 @@ const ticketIncludes = {
   _count: { select: { messages: true, attachments: true } },
 };
 
+// ─── Audit Log helper ──────────────────────
+async function createAuditLog(ticketId, userId, action, oldValue = null, newValue = null) {
+  return prisma.auditLog.create({
+    data: { ticketId, userId, action, oldValue, newValue },
+  });
+}
+
+// ─── Notification helper ───────────────────
+async function createNotification(userId, title, message, ticketId = null) {
+  return prisma.notification.create({
+    data: { userId, title, message, ticketId },
+  });
+}
+
 /**
  * GET /api/tickets
- * List tickets — filtered by role.
+ * List tickets — filtered by role with advanced filters.
  */
 async function listTickets(req, res, next) {
   try {
@@ -30,7 +53,9 @@ async function listTickets(req, res, next) {
       status,
       priority,
       categoryId,
-      assigneeId,
+      assignedTo,
+      dateFrom,
+      dateTo,
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc',
@@ -43,14 +68,10 @@ async function listTickets(req, res, next) {
     let where = {};
 
     if (role === 'user') {
-      // Users see only their own tickets
       where.requesterId = userId;
     } else if (role === 'technician') {
-      // Technicians see tickets assigned to them OR unassigned (open pool)
-      // We'll restrict to that by default and combine with other filters below
       where.AND = [{ OR: [{ assigneeId: userId }, { assigneeId: null }] }];
     }
-    // Admin sees everything
 
     // Apply filters
     if (status) {
@@ -62,12 +83,18 @@ async function listTickets(req, res, next) {
     if (categoryId) {
       where.categoryId = parseInt(categoryId);
     }
-    if (assigneeId) {
-      if (assigneeId === 'unassigned') {
+    if (assignedTo) {
+      if (assignedTo === 'unassigned') {
         where.assigneeId = null;
       } else {
-        where.assigneeId = assigneeId;
+        where.assigneeId = assignedTo;
       }
+    }
+    if (dateFrom || dateTo) {
+      const dateFilter = {};
+      if (dateFrom) dateFilter.gte = new Date(dateFrom);
+      if (dateTo) dateFilter.lte = new Date(dateTo);
+      where.createdAt = dateFilter;
     }
     if (search) {
       const searchFilter = {
@@ -117,10 +144,9 @@ async function listTickets(req, res, next) {
  */
 async function createTicket(req, res, next) {
   try {
-    const { title, description, categoryId, priority = 'medium' } = req.body;
+    const { title, description, categoryId, priority = 'MEDIA' } = req.body;
     const userId = req.user.id;
 
-    // Create ticket with retry loop to avoid rare ticket_number unique collisions
     let ticket = null;
     const maxRetries = 5;
     let attempt = 0;
@@ -135,30 +161,23 @@ async function createTicket(req, res, next) {
             description,
             categoryId: parseInt(categoryId),
             priority,
-            status: 'open',
+            status: 'APERTO',
             requesterId: userId,
           },
           include: ticketIncludes,
         });
         break;
       } catch (err) {
-        // Prisma unique constraint error code P2002 on ticket_number
         if (err.code === 'P2002' && attempt < maxRetries) {
-          // retry: loop will compute a new ticketNumber
           continue;
         }
         throw err;
       }
     }
 
-    // Log history
-    await logTicketHistory(ticket.id, userId, 'Ticket creato', {
-      ticketNumber: ticket.ticketNumber,
-      title: ticket.title,
-      priority,
-    });
+    await createAuditLog(ticket.id, userId, 'Ticket creato', null, JSON.stringify({ ticketNumber: ticket.ticketNumber, title, priority }));
 
-    // Handle initial attachments if any
+    // Handle initial attachments
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         await prisma.attachment.create({
@@ -175,11 +194,11 @@ async function createTicket(req, res, next) {
       }
     }
 
-    // Send email notification to technicians
+    // Notify technicians
     try {
       const technicians = await prisma.user.findMany({
         where: { role: { in: ['technician', 'admin'] }, isActive: true, isDeleted: false },
-        select: { email: true },
+        select: { id: true, email: true },
       });
 
       const emailData = {
@@ -199,12 +218,12 @@ async function createTicket(req, res, next) {
           subject: `🎫 Nuovo Ticket ${ticket.ticketNumber} — ${ticket.title}`,
           html: emailTemplates.ticketCreated(emailData, process.env.APP_URL),
         });
+        await createNotification(tech.id, 'Nuovo ticket assegnato', `Ticket ${ticket.ticketNumber} è stato creato e ti è stato assegnato.`, ticket.id);
       }
     } catch (emailErr) {
       console.error('Email notification error:', emailErr.message);
     }
 
-    // Refetch with attachments
     const fullTicket = await prisma.ticket.findUnique({
       where: { id: ticket.id },
       include: { ...ticketIncludes, attachments: true },
@@ -233,6 +252,10 @@ async function getTicket(req, res, next) {
           include: { uploader: { select: { id: true, firstName: true, lastName: true } } },
           orderBy: { createdAt: 'asc' },
         },
+        auditLogs: {
+          include: { user: { select: { id: true, firstName: true, lastName: true, role: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -240,7 +263,6 @@ async function getTicket(req, res, next) {
       throw new NotFoundError('Ticket');
     }
 
-    // Access control: users can only see their own tickets
     if (role === 'user' && ticket.requesterId !== userId) {
       throw new ForbiddenError('Non hai accesso a questo ticket');
     }
@@ -253,124 +275,37 @@ async function getTicket(req, res, next) {
 
 /**
  * PATCH /api/tickets/:id
- * Update ticket (status, priority, assignee).
+ * Update ticket (priority, category only).
  */
 async function updateTicket(req, res, next) {
   try {
     const ticketId = parseInt(req.params.id);
     const { role, id: userId } = req.user;
-    const { status, priority, assigneeId, categoryId } = req.body;
+    const { priority, categoryId } = req.body;
 
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
-      include: { requester: true, assignee: true },
+      include: { requester: true },
     });
 
     if (!ticket) {
       throw new NotFoundError('Ticket');
     }
 
-    // Role-based access
-    if (role === 'user') {
-      // Users can only close their own resolved tickets
-      if (ticket.requesterId !== userId) {
-        throw new ForbiddenError();
-      }
-      if (status && status !== 'closed') {
-        throw new ForbiddenError('Puoi solo chiudere un ticket risolto');
-      }
-      if (status === 'closed' && ticket.status !== 'resolved') {
-        throw new ForbiddenError('Il ticket deve essere risolto prima di poterlo chiudere');
-      }
+    if (role === 'user' && ticket.requesterId !== userId) {
+      throw new ForbiddenError();
     }
 
     const updateData = {};
-    const historyEntries = [];
 
-    // Status change
-    if (status && status !== ticket.status) {
-      updateData.status = status;
-      if (status === 'closed') {
-        updateData.closedAt = new Date();
-      } else if (ticket.closedAt) {
-        updateData.closedAt = null;
-      }
-      historyEntries.push({
-        action: 'Stato cambiato',
-        details: { from: ticket.status, to: status },
-      });
-
-      // Email notification to requester on status change
-      try {
-        sendEmail({
-          to: ticket.requester.email,
-          subject: `📋 Ticket ${ticket.ticketNumber} — Stato aggiornato`,
-          html: emailTemplates.ticketStatusChanged(
-            { id: ticket.id, ticketNumber: ticket.ticketNumber, title: ticket.title },
-            ticket.status,
-            status,
-            process.env.APP_URL
-          ),
-        });
-      } catch (e) { /* non-blocking */ }
-    }
-
-    // Priority change
     if (priority && priority !== ticket.priority) {
       updateData.priority = priority;
-      historyEntries.push({
-        action: 'Priorità cambiata',
-        details: { from: ticket.priority, to: priority },
-      });
+      await createAuditLog(ticketId, userId, 'Priorità cambiata', ticket.priority, priority);
     }
 
-    // Assignee change — only admins can assign to arbitrary users.
-    if (assigneeId !== undefined) {
-      if (req.user.role !== 'admin') {
-        throw new ForbiddenError('Solo un amministratore può assegnare il ticket ad altri');
-      }
-
-      if (assigneeId === null) {
-        updateData.assigneeId = null;
-        historyEntries.push({ action: 'Assegnazione rimossa', details: {} });
-      } else {
-        updateData.assigneeId = assigneeId;
-        if (ticket.status === 'open') {
-          updateData.status = 'in_progress';
-        }
-        const assignee = await prisma.user.findUnique({
-          where: { id: assigneeId },
-          select: { firstName: true, lastName: true, email: true },
-        });
-        if (assignee) {
-          historyEntries.push({
-            action: 'Ticket assegnato',
-            details: { assigneeName: `${assignee.firstName} ${assignee.lastName}` },
-          });
-
-          // Email to assigned technician
-          try {
-            sendEmail({
-              to: assignee.email,
-              subject: `🎫 Ticket ${ticket.ticketNumber} assegnato a te`,
-              html: emailTemplates.ticketAssigned(
-                { id: ticket.id, ticketNumber: ticket.ticketNumber, title: ticket.title },
-                `${assignee.firstName} ${assignee.lastName}`,
-                process.env.APP_URL
-              ),
-            });
-          } catch (e) { /* non-blocking */ }
-        }
-      }
-    }
-
-    // Category change
-    if (categoryId && categoryId !== ticket.categoryId) {
+    if (categoryId && parseInt(categoryId) !== ticket.categoryId) {
       updateData.categoryId = parseInt(categoryId);
-      historyEntries.push({
-        action: 'Categoria cambiata',
-        details: { from: ticket.categoryId, to: parseInt(categoryId) },
-      });
+      await createAuditLog(ticketId, userId, 'Categoria cambiata', String(ticket.categoryId), String(categoryId));
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -383,10 +318,145 @@ async function updateTicket(req, res, next) {
       include: ticketIncludes,
     });
 
-    // Log all history entries
-    for (const entry of historyEntries) {
-      await logTicketHistory(ticketId, userId, entry.action, entry.details);
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/tickets/:id/status
+ * Change status with state-machine validation.
+ */
+async function changeStatus(req, res, next) {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { status } = req.body;
+    const { role, id: userId } = req.user;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { requester: true, assignee: true },
+    });
+
+    if (!ticket) throw new NotFoundError('Ticket');
+
+    if (role === 'user' && ticket.requesterId !== userId) {
+      throw new ForbiddenError();
     }
+
+    // Users can only close their own resolved tickets
+    if (role === 'user') {
+      if (status !== 'CHIUSO') {
+        throw new ForbiddenError('Puoi solo chiudere un ticket risolto');
+      }
+      if (ticket.status !== 'RISOLTO') {
+        throw new ForbiddenError('Il ticket deve essere risolto prima di poterlo chiudere');
+      }
+    }
+
+    // State machine validation
+    if (ticket.status === status) {
+      return res.json(ticket);
+    }
+
+    const allowed = ALLOWED_TRANSITIONS[ticket.status] || [];
+    if (!allowed.includes(status)) {
+      throw new AppError(`Transizione non permessa da ${ticket.status} a ${status}`, 400);
+    }
+
+    const updateData = { status };
+    if (status === 'CHIUSO') {
+      updateData.closedAt = new Date();
+    } else if (ticket.closedAt) {
+      updateData.closedAt = null;
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: updateData,
+      include: ticketIncludes,
+    });
+
+    await createAuditLog(ticketId, userId, 'Stato cambiato', ticket.status, status);
+
+    // Email notification to requester
+    try {
+      sendEmail({
+        to: ticket.requester.email,
+        subject: `📋 Ticket ${ticket.ticketNumber} — Stato aggiornato`,
+        html: emailTemplates.ticketStatusChanged(
+          { id: ticket.id, ticketNumber: ticket.ticketNumber, title: ticket.title },
+          ticket.status,
+          status,
+          process.env.APP_URL
+        ),
+      });
+    } catch (e) { /* non-blocking */ }
+
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/tickets/:id/assign
+ * Assign ticket to an agent (admin only).
+ */
+async function assignTicket(req, res, next) {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { assigneeId } = req.body;
+    const { id: userId } = req.user;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { requester: true },
+    });
+
+    if (!ticket) throw new NotFoundError('Ticket');
+
+    const updateData = {};
+    let oldAssignee = ticket.assigneeId;
+
+    if (assigneeId === null || assigneeId === undefined) {
+      updateData.assigneeId = null;
+      await createAuditLog(ticketId, userId, 'Assegnazione rimossa', oldAssignee || 'Nessuno', 'Nessuno');
+    } else {
+      const assignee = await prisma.user.findUnique({
+        where: { id: assigneeId },
+        select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      });
+      if (!assignee) throw new NotFoundError('Agente');
+
+      updateData.assigneeId = assigneeId;
+      if (ticket.status === 'APERTO') {
+        updateData.status = 'IN_LAVORAZIONE';
+      }
+
+      await createAuditLog(ticketId, userId, 'Ticket assegnato', oldAssignee || 'Nessuno', `${assignee.firstName} ${assignee.lastName}`);
+
+      // Notify assignee
+      try {
+        sendEmail({
+          to: assignee.email,
+          subject: `🎫 Ticket ${ticket.ticketNumber} assegnato a te`,
+          html: emailTemplates.ticketAssigned(
+            { id: ticket.id, ticketNumber: ticket.ticketNumber, title: ticket.title },
+            `${assignee.firstName} ${assignee.lastName}`,
+            process.env.APP_URL
+          ),
+        });
+        await createNotification(assignee.id, 'Ticket assegnato', `Ti è stato assegnato il ticket ${ticket.ticketNumber}.`, ticket.id);
+      } catch (e) { /* non-blocking */ }
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: updateData,
+      include: ticketIncludes,
+    });
 
     res.json(updated);
   } catch (error) {
@@ -416,14 +486,12 @@ async function selfAssignTicket(req, res, next) {
       where: { id: ticketId },
       data: {
         assigneeId: userId,
-        status: ticket.status === 'open' ? 'in_progress' : ticket.status,
+        status: ticket.status === 'APERTO' ? 'IN_LAVORAZIONE' : ticket.status,
       },
       include: ticketIncludes,
     });
 
-    await logTicketHistory(ticketId, userId, 'Ticket preso in carico', {
-      technicianName: `${req.user.firstName} ${req.user.lastName}`,
-    });
+    await createAuditLog(ticketId, userId, 'Ticket preso in carico', 'Nessuno', `${req.user.firstName} ${req.user.lastName}`);
 
     res.json(updated);
   } catch (error) {
@@ -432,22 +500,138 @@ async function selfAssignTicket(req, res, next) {
 }
 
 /**
+ * POST /api/tickets/:id/comments
+ * Add a comment (public or internal).
+ */
+async function addComment(req, res, next) {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { content, isInternal = false } = req.body;
+    const userId = req.user.id;
+    const { role } = req.user;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: {
+        requester: { select: { email: true, firstName: true, lastName: true } },
+        assignee: { select: { email: true, firstName: true, lastName: true } },
+      },
+    });
+
+    if (!ticket) throw new NotFoundError('Ticket');
+
+    if (role === 'user' && ticket.requesterId !== userId) {
+      throw new ForbiddenError();
+    }
+
+    // Customers cannot post internal comments
+    if (role === 'user' && isInternal) {
+      throw new ForbiddenError('Non puoi creare commenti interni');
+    }
+
+    const comment = await prisma.ticketMessage.create({
+      data: {
+        ticketId,
+        authorId: userId,
+        content,
+        isInternal: !!isInternal,
+      },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+      },
+    });
+
+    // Handle attachments
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        await prisma.attachment.create({
+          data: {
+            ticketId,
+            messageId: comment.id,
+            uploaderId: userId,
+            filename: file.filename,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            path: file.path,
+          },
+        });
+      }
+    }
+
+    // Update ticket updatedAt
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { updatedAt: new Date() },
+    });
+
+    await createAuditLog(ticketId, userId, isInternal ? 'Commento interno aggiunto' : 'Commento pubblico aggiunto', null, content.slice(0, 200));
+
+    // Send email to the other party (only for public comments)
+    if (!isInternal) {
+      try {
+        const senderName = `${req.user.firstName} ${req.user.lastName}`;
+        let recipientEmail = null;
+
+        if (userId === ticket.requesterId && ticket.assignee) {
+          recipientEmail = ticket.assignee.email;
+        } else if (userId !== ticket.requesterId) {
+          recipientEmail = ticket.requester.email;
+        }
+
+        if (recipientEmail) {
+          sendEmail({
+            to: recipientEmail,
+            subject: `💬 Nuovo messaggio su ${ticket.ticketNumber}`,
+            html: emailTemplates.newMessage(
+              { id: ticket.id, ticketNumber: ticket.ticketNumber, title: ticket.title },
+              senderName,
+              content,
+              process.env.APP_URL
+            ),
+          });
+        }
+      } catch (e) { /* non-blocking */ }
+    }
+
+    // Refetch with attachments
+    const fullComment = await prisma.ticketMessage.findUnique({
+      where: { id: comment.id },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+        attachments: true,
+      },
+    });
+
+    res.status(201).json(fullComment);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * GET /api/tickets/:id/messages
+ * Get messages (hides internal comments from customers).
  */
 async function getMessages(req, res, next) {
   try {
     const ticketId = parseInt(req.params.id);
+    const { role, id: userId } = req.user;
 
-    // Verify ticket access
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) throw new NotFoundError('Ticket');
 
-    if (req.user.role === 'user' && ticket.requesterId !== req.user.id) {
+    if (role === 'user' && ticket.requesterId !== userId) {
       throw new ForbiddenError();
     }
 
+    const where = { ticketId };
+    if (role === 'user') {
+      where.isInternal = false;
+    }
+
     const messages = await prisma.ticketMessage.findMany({
-      where: { ticketId },
+      where,
       include: {
         author: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
         attachments: true,
@@ -463,97 +647,12 @@ async function getMessages(req, res, next) {
 
 /**
  * POST /api/tickets/:id/messages
+ * Legacy message endpoint (public only).
  */
 async function addMessage(req, res, next) {
   try {
-    const ticketId = parseInt(req.params.id);
-    const { content } = req.body;
-    const userId = req.user.id;
-
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: {
-        requester: { select: { email: true, firstName: true, lastName: true } },
-        assignee: { select: { email: true, firstName: true, lastName: true } },
-      },
-    });
-
-    if (!ticket) throw new NotFoundError('Ticket');
-
-    if (req.user.role === 'user' && ticket.requesterId !== userId) {
-      throw new ForbiddenError();
-    }
-
-    const message = await prisma.ticketMessage.create({
-      data: {
-        ticketId,
-        authorId: userId,
-        content,
-      },
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
-      },
-    });
-
-    // Handle attachments
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        await prisma.attachment.create({
-          data: {
-            ticketId,
-            messageId: message.id,
-            uploaderId: userId,
-            filename: file.filename,
-            originalName: file.originalname,
-            mimeType: file.mimetype,
-            size: file.size,
-            path: file.path,
-          },
-        });
-      }
-    }
-
-    // Update ticket's updatedAt
-    await prisma.ticket.update({
-      where: { id: ticketId },
-      data: { updatedAt: new Date() },
-    });
-
-    // Send email to the other party
-    try {
-      const senderName = `${req.user.firstName} ${req.user.lastName}`;
-      let recipientEmail = null;
-
-      if (userId === ticket.requesterId && ticket.assignee) {
-        recipientEmail = ticket.assignee.email;
-      } else if (userId !== ticket.requesterId) {
-        recipientEmail = ticket.requester.email;
-      }
-
-      if (recipientEmail) {
-        sendEmail({
-          to: recipientEmail,
-          subject: `💬 Nuovo messaggio su ${ticket.ticketNumber}`,
-          html: emailTemplates.newMessage(
-            { id: ticket.id, ticketNumber: ticket.ticketNumber, title: ticket.title },
-            senderName,
-            content,
-            process.env.APP_URL
-          ),
-        });
-      }
-    } catch (e) { /* non-blocking */ }
-
-    // Refetch with attachments
-    const fullMessage = await prisma.ticketMessage.findUnique({
-      where: { id: message.id },
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
-        attachments: true,
-      },
-    });
-
-    res.status(201).json(fullMessage);
+    req.body.isInternal = false;
+    return addComment(req, res, next);
   } catch (error) {
     next(error);
   }
@@ -592,8 +691,12 @@ module.exports = {
   createTicket,
   getTicket,
   updateTicket,
+  changeStatus,
+  assignTicket,
   selfAssignTicket,
+  addComment,
   getMessages,
   addMessage,
   getHistory,
 };
+

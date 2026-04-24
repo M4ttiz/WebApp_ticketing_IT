@@ -1,19 +1,22 @@
 // ============================================
-// Dashboard Controller — KPIs and chart data
+// Dashboard Controller — Unified KPI endpoint
 // ============================================
 
 const prisma = require('../lib/prisma');
 
 /**
- * GET /api/dashboard/stats
- * Returns KPI cards data.
+ * GET /api/dashboard
+ * Returns all KPIs, charts, and recent tickets.
  */
-async function getStats(req, res, next) {
+async function getDashboard(req, res, next) {
   try {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfWeek = new Date(startOfToday);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); // Monday
+
+    const sevenDaysAgo = new Date(startOfToday);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
     const { role, id: userId } = req.user;
 
@@ -23,42 +26,28 @@ async function getStats(req, res, next) {
       baseWhere.assigneeId = userId;
     }
 
+    // ─── KPI Counts ─────────────────────────
     const [
       totalOpen,
-      openToday,
       inProgress,
-      resolvedThisWeek,
+      onHold,
+      resolvedToday,
       totalTickets,
-      avgResolutionTime,
+      avgResolutionTickets,
     ] = await Promise.all([
-      // Total open tickets
-      prisma.ticket.count({
-        where: { ...baseWhere, status: 'open' },
-      }),
-      // Opened today
-      prisma.ticket.count({
-        where: { ...baseWhere, createdAt: { gte: startOfToday } },
-      }),
-      // In progress
-      prisma.ticket.count({
-        where: { ...baseWhere, status: 'in_progress' },
-      }),
-      // Resolved this week
+      prisma.ticket.count({ where: { ...baseWhere, status: 'APERTO' } }),
+      prisma.ticket.count({ where: { ...baseWhere, status: 'IN_LAVORAZIONE' } }),
+      prisma.ticket.count({ where: { ...baseWhere, status: 'IN_ATTESA' } }),
       prisma.ticket.count({
         where: {
           ...baseWhere,
-          status: { in: ['resolved', 'closed'] },
-          closedAt: { gte: startOfWeek },
+          status: { in: ['RISOLTO', 'CHIUSO'] },
+          closedAt: { gte: startOfToday },
         },
       }),
-      // Total tickets
       prisma.ticket.count({ where: baseWhere }),
-      // Average resolution time (for resolved/closed tickets)
       prisma.ticket.findMany({
-        where: {
-          ...baseWhere,
-          closedAt: { not: null },
-        },
+        where: { ...baseWhere, closedAt: { not: null } },
         select: { createdAt: true, closedAt: true },
         take: 500,
         orderBy: { closedAt: 'desc' },
@@ -66,84 +55,58 @@ async function getStats(req, res, next) {
     ]);
 
     // Calculate avg resolution time in hours
-    let avgHours = 0;
-    if (avgResolutionTime.length > 0) {
-      const totalMs = avgResolutionTime.reduce((sum, t) => {
+    let avgResolutionHours = 0;
+    if (avgResolutionTickets.length > 0) {
+      const totalMs = avgResolutionTickets.reduce((sum, t) => {
         return sum + (t.closedAt.getTime() - t.createdAt.getTime());
       }, 0);
-      avgHours = Math.round((totalMs / avgResolutionTime.length) / (1000 * 60 * 60) * 10) / 10;
+      avgResolutionHours = Math.round((totalMs / avgResolutionTickets.length) / (1000 * 60 * 60) * 10) / 10;
     }
 
-    // On-hold count
-    const onHold = await prisma.ticket.count({
-      where: { ...baseWhere, status: 'on_hold' },
-    });
-
-    res.json({
-      totalOpen,
-      openToday,
-      inProgress,
-      onHold,
-      resolvedThisWeek,
-      totalTickets,
-      avgResolutionHours: avgHours,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * GET /api/dashboard/charts
- * Returns data for charts.
- */
-async function getCharts(req, res, next) {
-  try {
-    const { days = 30 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
-
-    // ─── Tickets per day (trend line) ────────
-    const ticketsByDay = await prisma.$queryRaw`
-      SELECT DATE(created_at) as date, COUNT(*)::int as count
-      FROM tickets
-      WHERE created_at >= ${startDate}
-      GROUP BY DATE(created_at)
-      ORDER BY date ASC
-    `;
-
-    // ─── Distribution by status (pie) ────────
+    // ─── Tickets by status (for charts) ─────
     const byStatus = await prisma.ticket.groupBy({
       by: ['status'],
+      where: baseWhere,
       _count: { id: true },
     });
 
-    // ─── Distribution by category (bar) ──────
+    // ─── Tickets by category (for bar chart) ─
     const byCategory = await prisma.$queryRaw`
       SELECT c.name as category, COUNT(t.id)::int as count
       FROM tickets t
       JOIN categories c ON t.category_id = c.id
+      ${role === 'technician' ? prisma.$queryRaw`WHERE t.assignee_id = ${userId}` : prisma.$queryRaw``}
       GROUP BY c.name
       ORDER BY count DESC
     `;
 
-    // ─── Tickets per technician (horizontal bar) ──
-    const byTechnician = await prisma.$queryRaw`
+    // ─── Tickets created last 7 days ────────
+    const ticketsByDay = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date, COUNT(*)::int as count
+      FROM tickets
+      WHERE created_at >= ${sevenDaysAgo}
+      ${role === 'technician' ? prisma.$queryRaw`AND assignee_id = ${userId}` : prisma.$queryRaw``}
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `;
+
+    // ─── Top 5 agents by resolved tickets ───
+    const topAgents = await prisma.$queryRaw`
       SELECT
         u.first_name || ' ' || u.last_name as name,
-        COUNT(t.id)::int as total,
-        COUNT(CASE WHEN t.status IN ('resolved', 'closed') THEN 1 END)::int as resolved,
-        COUNT(CASE WHEN t.status = 'in_progress' THEN 1 END)::int as in_progress
+        COUNT(t.id)::int as resolved
       FROM tickets t
       JOIN users u ON t.assignee_id = u.id
-      WHERE u.role IN ('technician', 'admin')
+      WHERE t.status IN ('RISOLTO', 'CHIUSO')
+      AND t.closed_at >= ${startOfWeek}
       GROUP BY u.id, u.first_name, u.last_name
-      ORDER BY total DESC
-      LIMIT 10
+      ORDER BY resolved DESC
+      LIMIT 5
     `;
 
     // ─── Recent tickets ─────────────────────
     const recentTickets = await prisma.ticket.findMany({
+      where: baseWhere,
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -154,13 +117,20 @@ async function getCharts(req, res, next) {
     });
 
     res.json({
-      ticketsByDay,
-      byStatus: byStatus.map((s) => ({
-        status: s.status,
-        count: s._count.id,
-      })),
-      byCategory,
-      byTechnician,
+      kpi: {
+        totalOpen,
+        inProgress,
+        onHold,
+        resolvedToday,
+        totalTickets,
+        avgResolutionHours,
+      },
+      charts: {
+        byStatus: byStatus.map((s) => ({ status: s.status, count: s._count.id })),
+        byCategory,
+        ticketsByDay,
+      },
+      topAgents,
       recentTickets,
     });
   } catch (error) {
@@ -168,4 +138,5 @@ async function getCharts(req, res, next) {
   }
 }
 
-module.exports = { getStats, getCharts };
+module.exports = { getDashboard };
+

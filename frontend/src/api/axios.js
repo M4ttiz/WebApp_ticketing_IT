@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { toast } from 'sonner'
 
 const api = axios.create({
   baseURL: (import.meta.env.VITE_API_URL || 'http://localhost:5000') + '/api',
@@ -34,6 +35,12 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const originalRequest = err.config
+
+    // Generic server error toast
+    if (err.response && err.response.status >= 500 && !originalRequest._noToast) {
+      toast.error('Errore del server. Riprova più tardi.')
+    }
+
     if (err.response && err.response.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
@@ -56,8 +63,10 @@ api.interceptors.response.use(
       } catch (e) {
         processQueue(e, null)
         setAccessToken(null)
-	if (window.location.pathname !== '/login') {window.location.href = '/login'}        
-		return Promise.reject(e)
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+        return Promise.reject(e)
       } finally {
         isRefreshing = false
       }
@@ -67,3 +76,4 @@ api.interceptors.response.use(
 )
 
 export default api
+

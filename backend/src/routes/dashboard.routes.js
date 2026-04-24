@@ -11,10 +11,8 @@ const router = Router();
 router.use(requireAuth);
 router.use(requireRole(['admin', 'technician']));
 
-// GET /api/dashboard/stats
-router.get('/stats', dashboardController.getStats);
-
-// GET /api/dashboard/charts
-router.get('/charts', dashboardController.getCharts);
+// GET /api/dashboard
+router.get('/', dashboardController.getDashboard);
 
 module.exports = router;
+

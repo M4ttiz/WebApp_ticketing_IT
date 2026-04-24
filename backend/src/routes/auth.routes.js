@@ -5,7 +5,7 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validate');
-const { loginLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
 const { requireAuth } = require('../middleware/auth');
 const authController = require('../controllers/auth.controller');
 
@@ -32,6 +32,7 @@ router.post('/logout', authController.logout);
 // POST /api/auth/forgot-password
 router.post(
   '/forgot-password',
+  passwordResetLimiter,
   [body('email').isEmail().withMessage('Email non valida').normalizeEmail()],
   validate,
   authController.forgotPassword

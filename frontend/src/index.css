@@ -12,3 +12,42 @@ body {
   @apply bg-slate-900 text-slate-100;
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Glassmorphism helper */
+.glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Form focus ring */
+input, textarea, select {
+  @apply outline-none focus:ring-2 focus:ring-primary-500/50 transition-shadow;
+}
+
+/* Button micro-interactions */
+button:not(:disabled) {
+  @apply transition-transform duration-150 active:scale-95;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  @apply bg-slate-700 rounded animate-pulse-skeleton;
+}
+

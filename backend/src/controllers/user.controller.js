@@ -322,15 +322,24 @@ async function getProfile(req, res, next) {
 
 /**
  * PATCH /api/users/me
- * Update own profile (limited fields).
+ * Update own profile (limited fields + safe email change).
  */
 async function updateProfile(req, res, next) {
   try {
-    const { firstName, lastName, department } = req.body;
+    const { firstName, lastName, email, department } = req.body;
     const updateData = {};
     if (firstName !== undefined) updateData.firstName = firstName.trim();
     if (lastName !== undefined) updateData.lastName = lastName.trim();
     if (department !== undefined) updateData.department = department?.trim() || null;
+
+    if (email !== undefined) {
+      const emailLower = email.toLowerCase().trim();
+      const existing = await prisma.user.findUnique({ where: { email: emailLower } });
+      if (existing && existing.id !== req.user.id) {
+        throw new AppError('Email già in uso', 409);
+      }
+      updateData.email = emailLower;
+    }
 
     const user = await prisma.user.update({
       where: { id: req.user.id },

@@ -20,18 +20,19 @@ enum Role {
 }
 
 enum Priority {
-  low
-  medium
-  high
-  urgent
+  BASSA
+  MEDIA
+  ALTA
+  CRITICA
 }
 
 enum TicketStatus {
-  open
-  in_progress
-  on_hold
-  resolved
-  closed
+  APERTO
+  IN_LAVORAZIONE
+  IN_ATTESA
+  RISOLTO
+  CHIUSO
+  RIFIUTATO
 }
 
 // ─── Models ────────────────────────────────
@@ -57,6 +58,8 @@ model User {
   history          TicketHistory[]
   attachments      Attachment[]
   refreshTokens    RefreshToken[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -79,8 +82,8 @@ model Ticket {
   title        String       @db.VarChar(255)
   description  String       @db.Text
   categoryId   Int          @map("category_id")
-  priority     Priority     @default(medium)
-  status       TicketStatus @default(open)
+  priority     Priority     @default(MEDIA)
+  status       TicketStatus @default(APERTO)
   requesterId  String       @map("requester_id")
   assigneeId   String?      @map("assignee_id")
   createdAt    DateTime     @default(now()) @map("created_at")
@@ -94,6 +97,7 @@ model Ticket {
   messages    TicketMessage[]
   history     TicketHistory[]
   attachments Attachment[]
+  auditLogs   AuditLog[]
 
   @@index([status])
   @@index([priority])
@@ -104,11 +108,12 @@ model Ticket {
 }
 
 model TicketMessage {
-  id        Int      @id @default(autoincrement())
-  ticketId  Int      @map("ticket_id")
-  authorId  String   @map("author_id")
-  content   String   @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id         Int      @id @default(autoincrement())
+  ticketId   Int      @map("ticket_id")
+  authorId   String   @map("author_id")
+  content    String   @db.Text
+  isInternal Boolean  @default(false) @map("is_internal")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   // Relations
   ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -178,4 +183,39 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int      @map("ticket_id")
+  userId    String   @map("user_id")
+  action    String   @db.VarChar(255)
+  oldValue  String?  @map("old_value") @db.Text
+  newValue  String?  @map("new_value") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  ticketId  Int?     @map("ticket_id")
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
 }
