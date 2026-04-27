@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import api from '../api/axios'
 import KpiCard from '../components/KpiCard'
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
@@ -7,17 +8,29 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { Inbox, Clock, CheckCircle2, Timer, BarChart3, TrendingUp } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { useAuth } from '../context/AuthContext'
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const normalizedRole = String(user?.role || '').toLowerCase()
 
   useEffect(() => {
+    if (normalizedRole === 'user') {
+      setLoading(false)
+      return
+    }
+
     api.get('/dashboard')
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [normalizedRole])
+
+  if (normalizedRole === 'user') {
+    return <Navigate to="/tickets" replace />
+  }
 
   const kpi = data?.kpi || {}
   const charts = data?.charts || {}

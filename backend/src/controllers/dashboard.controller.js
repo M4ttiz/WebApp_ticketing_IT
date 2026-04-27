@@ -19,10 +19,15 @@ async function getDashboard(req, res, next) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
     const { role, id: userId } = req.user;
+    const normalizedRole = String(role || '').toLowerCase();
+
+    if (normalizedRole === 'user') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
 
     // Base where clause depending on role
     const baseWhere = {};
-    if (role === 'technician') {
+    if (normalizedRole === 'technician') {
       baseWhere.assigneeId = userId;
     }
 
@@ -71,7 +76,7 @@ async function getDashboard(req, res, next) {
     });
 
     // ─── Tickets by category (for bar chart) ─
-    const byCategory = role === 'technician'
+    const byCategory = normalizedRole === 'technician'
       ? await prisma.$queryRaw`
         SELECT c.name as category, COUNT(t.id)::int as count
         FROM tickets t
@@ -89,7 +94,7 @@ async function getDashboard(req, res, next) {
       `;
 
     // ─── Tickets created last 7 days ────────
-    const ticketsByDay = role === 'technician'
+    const ticketsByDay = normalizedRole === 'technician'
       ? await prisma.$queryRaw`
         SELECT DATE(created_at) as date, COUNT(*)::int as count
         FROM tickets
