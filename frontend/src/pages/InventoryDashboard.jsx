@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
-import { ProtectedRoute } from '../components/ProtectedRoute'
+import ProtectedRoute from '../components/ProtectedRoute'
 import { ui } from '../lib/utils'
 import { 
   Plus, 
