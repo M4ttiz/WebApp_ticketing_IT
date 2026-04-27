@@ -86,10 +86,13 @@ export default function InventoryDashboard() {
         )
       })
       
+      console.log('Fetching devices with params:', params.toString())
       const response = await api.get(`/inventory/devices?${params}`)
+      console.log('Devices response:', response.data)
       setDevices(response.data.devices)
       setPagination(response.data.pagination)
     } catch (error) {
+      console.error('Error fetching devices:', error)
       toast.error('Errore nel caricamento dei dispositivi')
     } finally {
       setLoading(false)
@@ -98,7 +101,9 @@ export default function InventoryDashboard() {
 
   const fetchStats = async () => {
     try {
+      console.log('Fetching inventory stats...')
       const response = await api.get('/inventory/stats')
+      console.log('Stats response:', response.data)
       setStats(response.data)
     } catch (error) {
       console.error('Error fetching stats:', error)
