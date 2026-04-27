@@ -128,53 +128,53 @@ export default function InventoryDashboard() {
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-slate-800 rounded-lg shadow-lg p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Totali</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-sm text-slate-400">Totali</p>
+              <p className="text-2xl font-bold text-slate-100">{stats.total}</p>
             </div>
-            <Package className="h-8 w-8 text-blue-500" />
+            <Package className="h-8 w-8 text-blue-400" />
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-slate-800 rounded-lg shadow-lg p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Disponibili</p>
-              <p className="text-2xl font-bold text-green-600">{stats.byStatus.available}</p>
+              <p className="text-sm text-slate-400">Disponibili</p>
+              <p className="text-2xl font-bold text-green-400">{stats.byStatus.available}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <CheckCircle className="h-8 w-8 text-green-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-slate-800 rounded-lg shadow-lg p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Assegnati</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.byStatus.deployed}</p>
+              <p className="text-sm text-slate-400">Assegnati</p>
+              <p className="text-2xl font-bold text-blue-400">{stats.byStatus.deployed}</p>
             </div>
-            <Package className="h-8 w-8 text-blue-500" />
+            <Package className="h-8 w-8 text-blue-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-slate-800 rounded-lg shadow-lg p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Rotti</p>
-              <p className="text-2xl font-bold text-red-600">{stats.byStatus.broken}</p>
+              <p className="text-sm text-slate-400">Rotti</p>
+              <p className="text-2xl font-bold text-red-400">{stats.byStatus.broken}</p>
             </div>
-            <XCircle className="h-8 w-8 text-red-500" />
+            <XCircle className="h-8 w-8 text-red-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-slate-800 rounded-lg shadow-lg p-4 border border-slate-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Manutenzione</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.byStatus.maintenance}</p>
+              <p className="text-sm text-slate-400">Manutenzione</p>
+              <p className="text-2xl font-bold text-yellow-400">{stats.byStatus.maintenance}</p>
             </div>
-            <AlertTriangle className="h-8 w-8 text-yellow-500" />
+            <AlertTriangle className="h-8 w-8 text-yellow-400" />
           </div>
         </div>
       </div>
@@ -197,56 +197,56 @@ export default function InventoryDashboard() {
     }
 
     return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-slate-800 rounded-lg shadow-lg overflow-hidden border border-slate-700">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-700">
+            <thead className="bg-slate-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Dispositivo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Tipo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Marca/Modello
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Numero Serie
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Stato
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Assegnato a
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                   Azioni
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-slate-800 divide-y divide-slate-700">
               {devices.map((device) => {
                 const TypeIcon = DEVICE_TYPE_ICONS[device.type] || Package
                 const StatusIcon = DEVICE_STATUS_ICONS[device.status] || Clock
                 
                 return (
-                  <tr key={device.id} className="hover:bg-gray-50">
+                  <tr key={device.id} className="hover:bg-slate-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <TypeIcon className="h-5 w-5 text-gray-400 mr-2" />
-                        <span className="text-sm font-medium text-gray-900">{device.name}</span>
+                        <TypeIcon className="h-5 w-5 text-slate-400 mr-2" />
+                        <span className="text-sm font-medium text-slate-100">{device.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-500">{device.type}</span>
+                      <span className="text-sm text-slate-300">{device.type}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{device.brand}</div>
-                      <div className="text-sm text-gray-500">{device.model}</div>
+                      <div className="text-sm text-slate-100">{device.brand}</div>
+                      <div className="text-sm text-slate-400">{device.model}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-500">{device.serialNumber}</span>
+                      <span className="text-sm text-slate-400">{device.serialNumber}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${DEVICE_STATUS_COLORS[device.status]}`}>
@@ -256,23 +256,23 @@ export default function InventoryDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {device.assignedUser ? (
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-100">
                           {device.assignedUser.firstName} {device.assignedUser.lastName}
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-400">Non assegnato</span>
+                        <span className="text-sm text-slate-400">Non assegnato</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => navigate(`/inventory/devices/${device.id}/edit`)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                        className="text-blue-400 hover:text-blue-300 mr-3"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(device.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-400 hover:text-red-300"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -286,8 +286,8 @@ export default function InventoryDashboard() {
         
         {devices.length === 0 && (
           <div className="text-center py-8">
-            <Package className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-500">Nessun dispositivo trovato</p>
+            <Package className="mx-auto h-12 w-12 text-slate-400" />
+            <p className="mt-2 text-sm text-slate-400">Nessun dispositivo trovato</p>
           </div>
         )}
       </div>
@@ -314,23 +314,23 @@ export default function InventoryDashboard() {
         {renderStats()}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="bg-slate-800 rounded-lg shadow-lg p-4 mb-6 border border-slate-700">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Cerca dispositivo..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className={ui.input}
               />
             </div>
             
             <select
               value={filters.type}
               onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={ui.select}
             >
               <option value="">Tutti i tipi</option>
               <option value="LAPTOP">Laptop</option>
@@ -347,7 +347,7 @@ export default function InventoryDashboard() {
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className={ui.select}
             >
               <option value="">Tutti gli stati</option>
               <option value="AVAILABLE">Disponibile</option>
@@ -359,7 +359,7 @@ export default function InventoryDashboard() {
 
             <button
               onClick={() => setFilters({ type: '', status: '', search: '' })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="w-full px-4 py-2 border border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700"
             >
               Reset Filtri
             </button>
@@ -371,21 +371,21 @@ export default function InventoryDashboard() {
         {/* Pagination */}
         {pagination.pages > 1 && (
           <div className="flex justify-between items-center mt-6">
-            <div className="text-sm text-gray-700">
+            <div className="text-sm text-slate-400">
               Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} di {pagination.total} risultati
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
                 disabled={pagination.page === 1}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 border border-slate-600 rounded-md text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Precedente
               </button>
               <button
                 onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.pages, prev.page + 1) }))}
                 disabled={pagination.page === pagination.pages}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 border border-slate-600 rounded-md text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Successivo
               </button>
