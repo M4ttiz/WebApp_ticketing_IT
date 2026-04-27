@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'technician', 'user'] },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'technician'] },
   { to: '/tickets', label: 'Ticket', icon: Ticket, roles: ['admin', 'technician', 'user'] },
   { to: '/users', label: 'Utenti', icon: Users, roles: ['admin'] },
   { to: '/categories', label: 'Categorie', icon: FolderKanban, roles: ['admin'] },
