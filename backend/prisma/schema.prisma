@@ -35,6 +35,26 @@ enum TicketStatus {
   RIFIUTATO
 }
 
+enum DeviceType {
+  LAPTOP
+  SMARTPHONE
+  TABLET
+  DESKTOP
+  MONITOR
+  PRINTER
+  ROUTER
+  SWITCH
+  OTHER
+}
+
+enum DeviceStatus {
+  AVAILABLE
+  DEPLOYED
+  BROKEN
+  MAINTENANCE
+  RETIRED
+}
+
 // ─── Models ────────────────────────────────
 
 model User {
@@ -60,6 +80,7 @@ model User {
   refreshTokens    RefreshToken[]
   auditLogs        AuditLog[]
   notifications    Notification[]
+  devicesAssigned  Device[]        @relation("DeviceAssignee")
 
   @@map("users")
 }
@@ -218,4 +239,26 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
+}
+
+model Device {
+  id           String       @id @default(uuid())
+  name         String       @db.VarChar(255)
+  type         DeviceType
+  brand        String       @db.VarChar(100)
+  model        String       @db.VarChar(100)
+  serialNumber String       @unique @map("serial_number") @db.VarChar(100)
+  status       DeviceStatus @default(AVAILABLE)
+  purchaseDate DateTime?    @map("purchase_date")
+  assignedTo   String?      @map("assigned_to")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  assignedUser User? @relation("DeviceAssignee", fields: [assignedTo], references: [id])
+
+  @@index([type])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("devices")
 }

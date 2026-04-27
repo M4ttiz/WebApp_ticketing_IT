@@ -7,6 +7,7 @@ import {
   Users,
   Settings,
   FolderKanban,
+  Package,
   Menu,
   X,
   LogOut,
@@ -15,6 +16,7 @@ import {
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'technician'] },
   { to: '/tickets', label: 'Ticket', icon: Ticket, roles: ['admin', 'technician', 'user'] },
+  { to: '/inventory', label: 'Inventario', icon: Package, roles: ['admin', 'technician'] },
   { to: '/users', label: 'Utenti', icon: Users, roles: ['admin'] },
   { to: '/categories', label: 'Categorie', icon: FolderKanban, roles: ['admin'] },
   { to: '/settings', label: 'Impostazioni', icon: Settings, roles: ['admin'] },
