@@ -71,24 +71,40 @@ async function getDashboard(req, res, next) {
     });
 
     // ─── Tickets by category (for bar chart) ─
-    const byCategory = await prisma.$queryRaw`
-      SELECT c.name as category, COUNT(t.id)::int as count
-      FROM tickets t
-      JOIN categories c ON t.category_id = c.id
-      ${role === 'technician' ? prisma.$queryRaw`WHERE t.assignee_id = ${userId}` : prisma.$queryRaw``}
-      GROUP BY c.name
-      ORDER BY count DESC
-    `;
+    const byCategory = role === 'technician'
+      ? await prisma.$queryRaw`
+        SELECT c.name as category, COUNT(t.id)::int as count
+        FROM tickets t
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.assignee_id = ${userId}
+        GROUP BY c.name
+        ORDER BY count DESC
+      `
+      : await prisma.$queryRaw`
+        SELECT c.name as category, COUNT(t.id)::int as count
+        FROM tickets t
+        JOIN categories c ON t.category_id = c.id
+        GROUP BY c.name
+        ORDER BY count DESC
+      `;
 
     // ─── Tickets created last 7 days ────────
-    const ticketsByDay = await prisma.$queryRaw`
-      SELECT DATE(created_at) as date, COUNT(*)::int as count
-      FROM tickets
-      WHERE created_at >= ${sevenDaysAgo}
-      ${role === 'technician' ? prisma.$queryRaw`AND assignee_id = ${userId}` : prisma.$queryRaw``}
-      GROUP BY DATE(created_at)
-      ORDER BY date ASC
-    `;
+    const ticketsByDay = role === 'technician'
+      ? await prisma.$queryRaw`
+        SELECT DATE(created_at) as date, COUNT(*)::int as count
+        FROM tickets
+        WHERE created_at >= ${sevenDaysAgo}
+        AND assignee_id = ${userId}
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+      `
+      : await prisma.$queryRaw`
+        SELECT DATE(created_at) as date, COUNT(*)::int as count
+        FROM tickets
+        WHERE created_at >= ${sevenDaysAgo}
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+      `;
 
     // ─── Top 5 agents by resolved tickets ───
     const topAgents = await prisma.$queryRaw`
@@ -133,8 +149,9 @@ async function getDashboard(req, res, next) {
       topAgents,
       recentTickets,
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    console.error('Dashboard error:', err);
+    next(err);
   }
 }
 

@@ -15,9 +15,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
 function App() {
-  const { loading } = useAuth()
+  const { user, isInitializing } = useAuth()
 
-  if (loading) {
+  if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
@@ -41,7 +41,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={user?.role === 'user' ? <Navigate to="/tickets" replace /> : <Dashboard />} />
             <Route path="/tickets" element={<TicketsList />} />
             <Route path="/tickets/new" element={<NewTicket />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />

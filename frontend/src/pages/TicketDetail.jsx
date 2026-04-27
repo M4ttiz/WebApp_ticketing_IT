@@ -202,7 +202,7 @@ export default function TicketDetail() {
             <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
               <MessageSquare size={16} className="text-primary-400" /> Commenti
             </h3>
-            <CommentThread messages={messages} currentUserId={user?.id} />
+            <CommentThread messages={messages} currentUserId={user?.id} currentUserRole={user?.role} />
 
             <div className="mt-4 pt-4 border-t border-slate-700/50">
               <textarea

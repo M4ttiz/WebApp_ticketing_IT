@@ -4,14 +4,17 @@ import { it } from 'date-fns/locale'
 import { MessageSquare, EyeOff, Paperclip } from 'lucide-react'
 import { cn } from '../lib/utils'
 
-export default function CommentThread({ messages, currentUserId }) {
+export default function CommentThread({ messages, currentUserId, currentUserRole }) {
   if (!messages || messages.length === 0) {
     return <div className="text-sm text-slate-400">Nessun messaggio</div>
   }
 
+  const visibleMessages =
+    currentUserRole === 'user' ? messages.filter((msg) => !msg.isInternal) : messages
+
   return (
     <div className="space-y-4">
-      {messages.map((msg) => {
+      {visibleMessages.map((msg) => {
         const isMine = msg.authorId === currentUserId
         return (
           <div key={msg.id} className={cn('flex gap-3', isMine ? 'flex-row-reverse' : 'flex-row')}>

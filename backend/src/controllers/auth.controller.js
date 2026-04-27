@@ -41,10 +41,10 @@ async function login(req, res, next) {
     // Set refresh token as httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/api/auth',
+      path: '/api/auth/refresh',
     });
 
     res.json({
@@ -77,7 +77,12 @@ async function refresh(req, res, next) {
       if (storedToken) {
         await prisma.refreshToken.delete({ where: { id: storedToken.id } });
       }
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/api/auth/refresh',
+      });
       return res.status(401).json({ error: 'Sessione scaduta, effettua di nuovo il login', code: 'REFRESH_EXPIRED' });
     }
 
@@ -93,10 +98,10 @@ async function refresh(req, res, next) {
 
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth',
+      path: '/api/auth/refresh',
     });
 
     res.json({
@@ -117,7 +122,12 @@ async function logout(req, res, next) {
     if (token) {
       await prisma.refreshToken.deleteMany({ where: { token } });
     }
-    res.clearCookie('refreshToken', { path: '/api/auth' });
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/api/auth/refresh',
+    });
     res.json({ message: 'Logout effettuato' });
   } catch (error) {
     next(error);
