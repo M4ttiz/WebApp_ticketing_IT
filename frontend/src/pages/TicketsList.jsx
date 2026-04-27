@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge'
 import PriorityBadge from '../components/PriorityBadge'
 import { Search, Plus, Filter, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { ui } from '../lib/utils'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tutti' },
@@ -126,8 +127,8 @@ export default function TicketsList() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Lista Ticket</h1>
-          <p className="text-slate-400 text-sm">Cerca, filtra e gestisci i ticket</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Lista Ticket</h1>
+          <p className={ui.subtleText}>Cerca, filtra e gestisci i ticket</p>
         </div>
         <Link
           to="/tickets/new"
@@ -146,7 +147,7 @@ export default function TicketsList() {
             value={filters.search}
             onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value, page: 1 }))}
             placeholder="Cerca per titolo, numero, descrizione..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-sm"
+            className={`${ui.input} pl-10 pr-4`}
           />
         </div>
         <button
@@ -161,13 +162,13 @@ export default function TicketsList() {
 
       {/* Filters panel */}
       {showFilters && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fade-in">
+        <div className={`${ui.cardSection} grid gap-3 animate-fade-in sm:grid-cols-2 lg:grid-cols-4`}>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Stato</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+              className={ui.select}
             >
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -177,7 +178,7 @@ export default function TicketsList() {
             <select
               value={filters.priority}
               onChange={(e) => setFilters((p) => ({ ...p, priority: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+              className={ui.select}
             >
               {PRIORITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
@@ -187,7 +188,7 @@ export default function TicketsList() {
             <select
               value={filters.categoryId}
               onChange={(e) => setFilters((p) => ({ ...p, categoryId: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+              className={ui.select}
             >
               <option value="">Tutte</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -198,7 +199,7 @@ export default function TicketsList() {
             <select
               value={filters.assignedTo}
               onChange={(e) => setFilters((p) => ({ ...p, assignedTo: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+              className={ui.select}
             >
               <option value="">Tutti</option>
               <option value="unassigned">Non assegnato</option>
@@ -210,7 +211,7 @@ export default function TicketsList() {
               type="date"
               value={filters.dateFrom}
               onChange={(e) => setFilters((p) => ({ ...p, dateFrom: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+              className={ui.input}
             />
           </div>
           <div>
@@ -219,7 +220,7 @@ export default function TicketsList() {
               type="date"
               value={filters.dateTo}
               onChange={(e) => setFilters((p) => ({ ...p, dateTo: e.target.value, page: 1 }))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+              className={ui.input}
             />
           </div>
           <div className="sm:col-span-2 flex items-end">

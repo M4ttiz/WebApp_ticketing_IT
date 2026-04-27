@@ -44,11 +44,12 @@ export default function Header() {
   if (!user) return null
 
   return (
-    <header className="h-16 bg-slate-800/80 glass border-b border-slate-700 flex items-center justify-end px-6 gap-4">
+    <header className="flex h-16 items-center justify-end gap-3 border-b border-slate-700 bg-slate-800/80 px-4 sm:px-6">
       <div className="relative">
         <button
           onClick={() => setOpen(!open)}
-          className="relative p-2 rounded-lg hover:bg-slate-700 transition-colors"
+          className="relative rounded-lg p-2 transition-colors hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+          aria-label="Apri notifiche"
         >
           <Bell size={20} />
           {unreadCount > 0 && (
@@ -59,7 +60,7 @@ export default function Header() {
         </button>
 
         {open && (
-          <div className="absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+          <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 shadow-xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
               <span className="font-semibold text-sm">Notifiche</span>
               {unreadCount > 0 && (
@@ -96,7 +97,10 @@ export default function Header() {
         )}
       </div>
 
-      <Link to="/profile" className="flex items-center gap-3 hover:bg-slate-700/50 rounded-lg px-2 py-1 transition-colors">
+      <Link
+        to="/profile"
+        className="flex items-center gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-slate-700/50 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+      >
         <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-xs font-bold text-white">
           {user.firstName?.[0]}{user.lastName?.[0]}
         </div>

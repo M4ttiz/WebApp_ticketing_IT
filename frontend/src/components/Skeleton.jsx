@@ -1,5 +1,5 @@
 import React from 'react'
-import { cn } from '../lib/utils'
+import { cn, ui } from '../lib/utils'
 
 export function Skeleton({ className }) {
   return <div className={cn('skeleton', className)} />
@@ -7,7 +7,7 @@ export function Skeleton({ className }) {
 
 export function SkeletonCard() {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-3">
+    <div className={cn(ui.cardSection, 'space-y-3')}>
       <div className="flex items-center gap-4">
         <Skeleton className="w-12 h-12 rounded-lg" />
         <div className="space-y-2 flex-1">

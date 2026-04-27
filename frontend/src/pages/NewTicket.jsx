@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge'
 import PriorityBadge from '../components/PriorityBadge'
 import { toast } from 'sonner'
 import { ChevronRight, ChevronLeft, Send, CheckCircle2 } from 'lucide-react'
+import { ui } from '../lib/utils'
 
 const STEPS = [
   { id: 1, label: 'Categoria e priorità' },
@@ -27,6 +28,7 @@ export default function NewTicket() {
     description: '',
     files: [],
   })
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     api.get('/categories').then((r) => setCategories(r.data)).catch(() => {})
@@ -41,6 +43,8 @@ export default function NewTicket() {
   }
 
   const submit = async () => {
+    setSubmitted(true)
+    if (!canNext()) return
     setLoading(true)
     try {
       const data = new FormData()
@@ -60,11 +64,15 @@ export default function NewTicket() {
     }
   }
 
+  const titleError = submitted && step >= 2 && form.title.trim().length < 3
+  const descriptionError = submitted && step >= 2 && form.description.trim().length < 10
+  const categoryError = submitted && step >= 1 && !form.categoryId
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Nuovo Ticket</h1>
-        <p className="text-slate-400 text-sm">Compila il modulo in 3 semplici passaggi</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Nuovo Ticket</h1>
+        <p className={ui.subtleText}>Compila il modulo in 3 passaggi</p>
       </div>
 
       {/* Stepper */}
@@ -87,7 +95,7 @@ export default function NewTicket() {
       </div>
 
       {/* Form steps */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <div className={`${ui.cardSection} p-6`}>
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -102,13 +110,16 @@ export default function NewTicket() {
                 <select
                   value={form.categoryId}
                   onChange={(e) => update('categoryId', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+                  className={ui.select}
                 >
                   <option value="">Seleziona categoria</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+                {categoryError && (
+                  <p className="mt-1 text-xs text-rose-400">Seleziona una categoria.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Priorità</label>
@@ -145,8 +156,11 @@ export default function NewTicket() {
                   value={form.title}
                   onChange={(e) => update('title', e.target.value)}
                   placeholder="Breve riassunto del problema"
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+                  className={ui.input}
                 />
+                {titleError && (
+                  <p className="mt-1 text-xs text-rose-400">Inserisci almeno 3 caratteri nel titolo.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Descrizione</label>
@@ -155,8 +169,11 @@ export default function NewTicket() {
                   onChange={(e) => update('description', e.target.value)}
                   placeholder="Descrivi il problema in dettaglio..."
                   rows={6}
-                  className="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm resize-none"
+                  className={`${ui.textarea} resize-none`}
                 />
+                {descriptionError && (
+                  <p className="mt-1 text-xs text-rose-400">Inserisci almeno 10 caratteri nella descrizione.</p>
+                )}
               </div>
             </motion.div>
           )}
@@ -198,6 +215,7 @@ export default function NewTicket() {
               onClick={() => setStep((p) => p + 1)}
               disabled={!canNext()}
               className="inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 disabled:opacity-30 text-white transition-colors"
+              type="button"
             >
               Avanti <ChevronRight size={16} />
             </button>
@@ -207,7 +225,7 @@ export default function NewTicket() {
               disabled={loading}
               className="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white transition-colors"
             >
-              {loading ? 'Creazione...' : <><Send size={16} /> Crea Ticket</>}
+              {loading ? 'Creazione in corso...' : <><Send size={16} /> Crea Ticket</>}
             </button>
           )}
         </div>

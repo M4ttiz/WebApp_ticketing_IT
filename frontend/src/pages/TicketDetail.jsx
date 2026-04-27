@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
+import { ui } from '../lib/utils'
 import {
   ArrowLeft,
   MessageSquare,
@@ -133,7 +134,7 @@ export default function TicketDetail() {
   const availableTransitions = STATUS_FLOW[ticket.status] || []
 
   return (
-    <div className="space-y-6">
+    <div className={ui.page}>
       <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors">
         <ArrowLeft size={16} /> Indietro
       </button>
@@ -145,8 +146,8 @@ export default function TicketDetail() {
             <StatusBadge status={ticket.status} />
             <PriorityBadge priority={ticket.priority} />
           </div>
-          <h2 className="text-lg text-slate-200">{ticket.title}</h2>
-          <p className="text-slate-400 text-sm mt-1">{ticket.description}</p>
+          <h2 className="text-lg text-slate-100">{ticket.title}</h2>
+          <p className="mt-1 text-sm text-slate-400">{ticket.description}</p>
           <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-400">
             <span>Categoria: <strong className="text-slate-200">{ticket.category?.name}</strong></span>
             <span>Richiedente: <strong className="text-slate-200">{ticket.requester?.firstName} {ticket.requester?.lastName}</strong></span>
@@ -173,13 +174,13 @@ export default function TicketDetail() {
 
       {/* Admin assign */}
       {isAdmin && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className={`${ui.cardSection} flex flex-col items-start gap-3 sm:flex-row sm:items-center`}>
           <UserCheck size={18} className="text-primary-400 shrink-0" />
           <span className="text-sm font-medium">Assegna a:</span>
           <select
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm flex-1"
+            className={`${ui.select} flex-1`}
           >
             <option value="">Non assegnato</option>
             {agents.map((a) => (
@@ -195,10 +196,10 @@ export default function TicketDetail() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Comments */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+          <div className={ui.cardSection}>
             <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
               <MessageSquare size={16} className="text-primary-400" /> Commenti
             </h3>
@@ -210,7 +211,7 @@ export default function TicketDetail() {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Scrivi un commento..."
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm resize-none"
+                className={`${ui.textarea} resize-none`}
               />
               <div className="flex items-center justify-between mt-2">
                 {isAgent && (
@@ -238,13 +239,13 @@ export default function TicketDetail() {
 
         {/* Timeline + Attachments */}
         <div className="space-y-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+          <div className={ui.cardSection}>
             <h3 className="font-semibold text-sm mb-4">Cronologia</h3>
             <TicketTimeline logs={ticket.auditLogs} />
           </div>
 
           {ticket.attachments?.length > 0 && (
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+            <div className={ui.cardSection}>
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <Paperclip size={16} className="text-primary-400" /> Allegati
               </h3>

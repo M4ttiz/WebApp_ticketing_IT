@@ -35,7 +35,7 @@ export default function FileDropzone({ files, onChange, maxFiles = 5 }) {
       <div
         {...getRootProps()}
         className={cn(
-          'border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors',
+          'cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-colors',
           isDragActive ? 'border-primary-500 bg-primary-500/5' : 'border-slate-600 hover:border-slate-500',
           files.length >= maxFiles && 'opacity-50 cursor-not-allowed'
         )}
@@ -47,6 +47,9 @@ export default function FileDropzone({ files, onChange, maxFiles = 5 }) {
         </p>
         <p className="text-xs text-slate-500 mt-1">
           Max {maxFiles} file — JPG, PNG, PDF, DOCX, XLSX
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Dimensione massima consigliata: 10MB per file
         </p>
       </div>
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronUp, ChevronDown } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn, ui } from '../lib/utils'
 
 export default function DataTable({
   columns,
@@ -15,10 +15,10 @@ export default function DataTable({
   const { page, limit, total, totalPages } = pagination || {}
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+    <div className={cn(ui.card, 'overflow-hidden')}>
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-700/50 text-slate-300 uppercase text-xs">
+          <thead className="bg-slate-700/40 text-slate-300 uppercase text-xs">
             <tr>
               {columns.map((col) => (
                 <th
@@ -42,14 +42,14 @@ export default function DataTable({
                 <tr key={i}>
                   {columns.map((_, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-slate-700 rounded animate-pulse w-full" />
+                      <div className="h-4 w-full animate-pulse rounded bg-slate-700/80" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={columns.length} className="px-4 py-10 text-center text-slate-400">
                   Nessun dato trovato
                 </td>
               </tr>

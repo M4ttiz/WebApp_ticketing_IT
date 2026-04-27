@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, useSpring, useTransform } from 'framer-motion'
+import { ui } from '../lib/utils'
 
 export default function KpiCard({ title, value, icon: Icon, colorClass = 'text-primary-400', delay = 0 }) {
   const [displayValue, setDisplayValue] = useState(0)
@@ -17,9 +18,9 @@ export default function KpiCard({ title, value, icon: Icon, colorClass = 'text-p
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
-      className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center gap-4"
+      className={`${ui.cardSection} flex items-center gap-4`}
     >
-      <div className={`w-12 h-12 rounded-lg bg-slate-700/50 flex items-center justify-center ${colorClass}`}>
+      <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-slate-700/40 ${colorClass}`}>
         <Icon size={24} />
       </div>
       <div>

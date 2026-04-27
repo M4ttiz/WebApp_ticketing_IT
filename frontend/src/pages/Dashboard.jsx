@@ -9,6 +9,7 @@ import { Inbox, Clock, CheckCircle2, Timer, BarChart3, TrendingUp } from 'lucide
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../context/AuthContext'
+import { ui } from '../lib/utils'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -38,10 +39,10 @@ export default function Dashboard() {
   const topAgents = data?.topAgents || []
 
   return (
-    <div className="space-y-6">
+    <div className={ui.page}>
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-slate-400 text-sm">Panoramica dei ticket e delle performance</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className={ui.subtleText}>Panoramica ticket e performance operative</p>
       </div>
 
       {/* KPI Cards */}
@@ -64,8 +65,8 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className={ui.cardSection}>
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={18} className="text-primary-400" />
             <h3 className="font-semibold text-sm">Ticket per categoria</h3>
@@ -92,7 +93,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+        <div className={ui.cardSection}>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} className="text-primary-400" />
             <h3 className="font-semibold text-sm">Attività ultimi 7 giorni</h3>
@@ -123,8 +124,8 @@ export default function Dashboard() {
       </div>
 
       {/* Recent tickets + Top agents */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className={`lg:col-span-2 ${ui.card} overflow-hidden`}>
           <div className="px-5 py-4 border-b border-slate-700">
             <h3 className="font-semibold text-sm">Ticket recenti</h3>
           </div>
@@ -136,8 +137,8 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-700/50 text-slate-300 uppercase text-xs">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-700/40 text-xs uppercase text-slate-300">
                   <tr>
                     <th className="px-5 py-3">Numero</th>
                     <th className="px-5 py-3">Titolo</th>
@@ -147,7 +148,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
                   {recentTickets.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-700/30 transition-colors">
+                    <tr key={t.id} className="transition-colors hover:bg-slate-700/20">
                       <td className="px-5 py-3 font-mono text-xs text-slate-400">{t.ticketNumber}</td>
                       <td className="px-5 py-3 max-w-xs truncate">{t.title}</td>
                       <td className="px-5 py-3"><StatusBadge status={t.status} /></td>
@@ -160,7 +161,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+        <div className={ui.cardSection}>
           <h3 className="font-semibold text-sm mb-4">Top agenti (settimana)</h3>
           {loading ? (
             <div className="space-y-3">

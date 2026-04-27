@@ -33,8 +33,9 @@ export default function Sidebar() {
     <>
       {/* Mobile toggle */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-slate-800 rounded-md border border-slate-700"
+        className="fixed left-3 top-3 z-50 rounded-md border border-slate-700 bg-slate-800 p-2 lg:hidden"
         onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label={mobileOpen ? 'Chiudi menu' : 'Apri menu'}
       >
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
@@ -49,21 +50,18 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`
-          fixed lg:static inset-y-0 left-0 z-40 w-64 bg-slate-800 border-r border-slate-700
-          transform transition-transform duration-300 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          flex flex-col
-        `}
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-slate-700 bg-slate-800 transition-transform duration-300 ease-in-out lg:static ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
       >
-        <div className="p-6 flex items-center gap-3">
+        <div className="flex items-center gap-3 border-b border-slate-700/60 px-5 py-4">
           <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center font-bold text-white">
             IT
           </div>
           <span className="text-lg font-semibold">Ticketing</span>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1">
+        <nav className="flex-1 space-y-1 px-3 py-4">
           {filteredNav.map((item) => {
             const active = location.pathname === item.to || location.pathname.startsWith(item.to + '/')
             return (
@@ -71,10 +69,11 @@ export default function Sidebar() {
                 key={item.to}
                 to={item.to}
                 onClick={() => setMobileOpen(false)}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                  ${active ? 'bg-primary-500/10 text-primary-400' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
-                `}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  active
+                    ? 'bg-primary-500/15 text-primary-300 ring-1 ring-primary-500/30'
+                    : 'text-slate-300 hover:bg-slate-700/70 hover:text-white'
+                }`}
               >
                 <item.icon size={18} />
                 {item.label}
@@ -83,10 +82,10 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-700">
+        <div className="border-t border-slate-700/60 p-3">
           <Link
             to="/profile"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
           >
             <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-xs font-semibold">
               {user.firstName?.[0]}{user.lastName?.[0]}
@@ -98,7 +97,7 @@ export default function Sidebar() {
           </Link>
           <button
             onClick={logout}
-            className="mt-2 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-rose-400 hover:bg-rose-500/10 transition-colors"
+            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-rose-400 transition-colors hover:bg-rose-500/10"
           >
             <LogOut size={18} />
             Logout

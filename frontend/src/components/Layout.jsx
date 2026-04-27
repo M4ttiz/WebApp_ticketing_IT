@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import { ui } from '../lib/utils'
 
 export default function Layout() {
   return (
@@ -10,7 +11,7 @@ export default function Layout() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={window.location.pathname}
@@ -19,7 +20,9 @@ export default function Layout() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
-              <Outlet />
+              <div className={ui.page}>
+                <Outlet />
+              </div>
             </motion.div>
           </AnimatePresence>
         </main>

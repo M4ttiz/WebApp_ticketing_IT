@@ -13,7 +13,7 @@ export default function CommentThread({ messages, currentUserId, currentUserRole
     currentUserRole === 'user' ? messages.filter((msg) => !msg.isInternal) : messages
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {visibleMessages.map((msg) => {
         const isMine = msg.authorId === currentUserId
         return (
@@ -21,7 +21,7 @@ export default function CommentThread({ messages, currentUserId, currentUserRole
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-semibold shrink-0">
               {msg.author?.firstName?.[0]}{msg.author?.lastName?.[0]}
             </div>
-            <div className={cn('max-w-[80%] rounded-xl px-4 py-3', isMine ? 'bg-primary-500/20' : 'bg-slate-700/50')}>
+            <div className={cn('max-w-[80%] rounded-xl px-4 py-3 ring-1', isMine ? 'bg-primary-500/15 ring-primary-500/30' : 'bg-slate-700/40 ring-slate-600/40')}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-semibold text-slate-200">
                   {msg.author?.firstName} {msg.author?.lastName}
