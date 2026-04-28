@@ -251,20 +251,20 @@ model Asset {
   category       AssetCategory
   brand          String?       @db.VarChar(100)
   model          String?       @db.VarChar(100)
-  serialNumber   String?       @unique @map('serial_number') @db.VarChar(100)
-  assetTag       String?       @unique @map('asset_tag') @db.VarChar(100)
+  serialNumber   String?       @unique @map("serial_number") @db.VarChar(100)
+  assetTag       String?       @unique @map("asset_tag") @db.VarChar(100)
   status         AssetStatus   @default(DISPONIBILE)
   location       String?       @db.VarChar(200)
-  assignedTo     String?       @map('assigned_to') @db.VarChar(200)
-  assignedUserId String?       @map('assigned_user_id') @db.VarChar(36)
-  purchaseDate   DateTime?     @map('purchase_date')
-  warrantyExpiry DateTime?     @map('warranty_expiry')
+  assignedTo     String?       @map("assigned_to") @db.VarChar(200)
+  assignedUserId String?       @map("assigned_user_id") @db.VarChar(36)
+  purchaseDate   DateTime?     @map("purchase_date")
+  warrantyExpiry DateTime?     @map("warranty_expiry")
   notes          String?       @db.Text
-  ipAddress      String?       @map('ip_address') @db.VarChar(45)
-  macAddress     String?       @map('mac_address') @db.VarChar(17)
-  osVersion      String?       @map('os_version') @db.VarChar(100)
-  createdAt      DateTime      @default(now()) @map('created_at')
-  updatedAt      DateTime      @updatedAt @map('updated_at')
+  ipAddress      String?       @map("ip_address") @db.VarChar(45)
+  macAddress     String?       @map("mac_address") @db.VarChar(17)
+  osVersion      String?       @map("os_version") @db.VarChar(100)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   // Relations
   assignedUser User?         @relation(fields: [assignedUserId], references: [id])
@@ -273,14 +273,14 @@ model Asset {
   @@index([category])
   @@index([status])
   @@index([assignedUserId])
-  @@map('assets')
+  @@map("assets")
 }
 
 model TicketAsset {
   id        String   @id @default(uuid())
-  ticketId  Int      @map('ticket_id')
-  assetId   String   @map('asset_id') @db.VarChar(36)
-  createdAt DateTime @default(now()) @map('created_at')
+  ticketId  Int      @map("ticket_id")
+  assetId   String   @map("asset_id") @db.VarChar(36)
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -289,5 +289,5 @@ model TicketAsset {
   @@unique([ticketId, assetId])
   @@index([ticketId])
   @@index([assetId])
-  @@map('ticket_assets')
+  @@map("ticket_assets")
 }
