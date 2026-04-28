@@ -19,10 +19,12 @@ async function listNotifications(req, res, next) {
       where.isRead = false;
     }
 
+    const take = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
+
     const notifications = await prisma.notification.findMany({
       where,
       orderBy: [{ isRead: 'asc' }, { createdAt: 'desc' }],
-      take: parseInt(limit),
+      take,
     });
 
     const unreadCount = await prisma.notification.count({
@@ -31,6 +33,7 @@ async function listNotifications(req, res, next) {
 
     res.json({ notifications, unreadCount });
   } catch (error) {
+    console.error('Notifications error:', error);
     next(error);
   }
 }
