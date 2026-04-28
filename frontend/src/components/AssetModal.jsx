@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { createAsset, updateAsset } from '../api/assets'
+import api from '../api/axios'
 import { ui } from '../lib/utils'
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT',
-  'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO'
+  'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO',
 ]
 
 const STATUSES = [
@@ -17,6 +18,7 @@ const STATUSES = [
 export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
   const isEdit = !!asset
   const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
   const [form, setForm] = useState({
     name: '', category: '', brand: '', model: '',
     serialNumber: '', assetTag: '', status: 'DISPONIBILE',
@@ -24,6 +26,12 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
     purchaseDate: '', warrantyExpiry: '', notes: '',
     ipAddress: '', macAddress: '', osVersion: '',
   })
+
+  useEffect(() => {
+    api.get('/settings/asset-categories')
+      .then((res) => setCategories(res.data.selected || DEFAULT_CATEGORIES))
+      .catch(() => setCategories(DEFAULT_CATEGORIES))
+  }, [])
 
   useEffect(() => {
     if (asset) {
@@ -81,7 +89,11 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
       onSaved()
       onClose()
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Errore nel salvataggio')
+      const details = err.response?.data?.details
+      const firstDetail = Array.isArray(details) && details.length > 0
+        ? `${details[0].field}: ${details[0].message}`
+        : null
+      toast.error(firstDetail || err.response?.data?.error || 'Errore nel salvataggio')
     } finally {
       setLoading(false)
     }
@@ -136,7 +148,7 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
                     </label>
                     <select value={form.category} onChange={e => update('category', e.target.value)} className={ui.select}>
                       <option value="">Seleziona</option>
-                      {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
 

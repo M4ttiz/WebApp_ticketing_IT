@@ -8,6 +8,7 @@ import TicketDetail from './pages/TicketDetail'
 import NewTicket from './pages/NewTicket'
 import Users from './pages/Users'
 import Settings from './pages/Settings'
+import AssetCategoriesAdmin from './pages/AssetCategoriesAdmin'
 import Profile from './pages/Profile'
 import Categories from './pages/Categories'
 import Inventory from './pages/Inventory'
@@ -52,6 +53,7 @@ function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/asset-categories" element={<AssetCategoriesAdmin />} />
             </Route>
             <Route element={<ProtectedRoute roles={['admin', 'technician']} />}>
               <Route path="/inventory" element={<Inventory />} />

@@ -31,4 +31,18 @@ router.put(
 // POST /api/settings/smtp/test
 router.post('/smtp/test', settingsController.testSmtp);
 
+// GET /api/settings/asset-categories
+router.get('/asset-categories', settingsController.getAssetCategories);
+
+// PUT /api/settings/asset-categories
+router.put(
+  '/asset-categories',
+  [
+    body('selected').isArray({ min: 1 }).withMessage('Seleziona almeno una categoria'),
+    body('selected.*').isString().withMessage('Valore categoria non valido'),
+  ],
+  validate,
+  settingsController.updateAssetCategories
+);
+
 module.exports = router;

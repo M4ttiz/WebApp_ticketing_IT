@@ -6,6 +6,20 @@ const prisma = require('../lib/prisma');
 const { testSmtpConnection, invalidateTransporter } = require('../services/email.service');
 const { AppError } = require('../utils/errors');
 
+const DEFAULT_ASSET_CATEGORIES = [
+  'LAPTOP',
+  'DESKTOP',
+  'MONITOR',
+  'STAMPANTE',
+  'ACCESS_POINT',
+  'SERVER',
+  'SWITCH',
+  'ROUTER',
+  'TELEFONO',
+  'TABLET',
+  'ALTRO',
+];
+
 /**
  * GET /api/settings/smtp
  */
@@ -95,4 +109,61 @@ async function testSmtp(req, res, next) {
   }
 }
 
-module.exports = { getSmtpSettings, updateSmtpSettings, testSmtp };
+/**
+ * GET /api/settings/asset-categories
+ */
+async function getAssetCategories(req, res, next) {
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: 'asset.categories' } });
+    const selected = Array.isArray(setting?.value?.selected)
+      ? setting.value.selected.filter((c) => DEFAULT_ASSET_CATEGORIES.includes(c))
+      : DEFAULT_ASSET_CATEGORIES;
+
+    res.json({
+      available: DEFAULT_ASSET_CATEGORIES,
+      selected: selected.length ? selected : DEFAULT_ASSET_CATEGORIES,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PUT /api/settings/asset-categories
+ */
+async function updateAssetCategories(req, res, next) {
+  try {
+    const { selected } = req.body;
+    if (!Array.isArray(selected) || selected.length === 0) {
+      throw new AppError('Seleziona almeno una categoria', 400);
+    }
+
+    const normalized = selected
+      .map((item) => String(item || '').trim().toUpperCase())
+      .filter(Boolean);
+
+    const uniqueSelected = [...new Set(normalized)];
+    const invalid = uniqueSelected.filter((c) => !DEFAULT_ASSET_CATEGORIES.includes(c));
+    if (invalid.length > 0) {
+      throw new AppError(`Categorie non valide: ${invalid.join(', ')}`, 400);
+    }
+
+    await prisma.setting.upsert({
+      where: { key: 'asset.categories' },
+      update: { value: { selected: uniqueSelected } },
+      create: { key: 'asset.categories', value: { selected: uniqueSelected } },
+    });
+
+    res.json({ message: 'Categorie asset aggiornate', selected: uniqueSelected });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  getSmtpSettings,
+  updateSmtpSettings,
+  testSmtp,
+  getAssetCategories,
+  updateAssetCategories,
+};

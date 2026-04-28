@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Plus, Search, Server, FileSpreadsheet, FileDown, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { getAssets, deleteAsset, getTopOpenTicketsByProduct, resetInventory } from '../api/assets'
+import api from '../api/axios'
 import AssetModal from '../components/AssetModal'
 import ConfirmModal from '../components/ConfirmModal'
 import { useAuth } from '../context/AuthContext'
@@ -21,9 +22,9 @@ const CATEGORY_COLORS = {
   ALTRO: 'from-slate-500/20 to-slate-600/20 border-slate-500/40',
 }
 
-const CATEGORIES = [
-  'Tutte', 'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT',
-  'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO'
+const DEFAULT_CATEGORIES = [
+  'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT',
+  'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO',
 ]
 
 export default function Inventory() {
@@ -33,6 +34,7 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true)
   const [kpiLoading, setKpiLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [categories, setCategories] = useState(['Tutte', ...DEFAULT_CATEGORIES])
   const [categoryFilter, setCategoryFilter] = useState('Tutte')
   const [locationFilter, setLocationFilter] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('')
@@ -42,6 +44,15 @@ export default function Inventory() {
   const [confirmReset, setConfirmReset] = useState(false)
 
   const isAdmin = user?.role === 'admin'
+
+  useEffect(() => {
+    api.get('/settings/asset-categories')
+      .then((res) => {
+        const selected = res.data.selected || DEFAULT_CATEGORIES
+        setCategories(['Tutte', ...selected])
+      })
+      .catch(() => setCategories(['Tutte', ...DEFAULT_CATEGORIES]))
+  }, [])
 
   const fetchAssets = async () => {
     setLoading(true)
@@ -224,7 +235,7 @@ export default function Inventory() {
           />
         </div>
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className={ui.select}>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c === 'Tutte' ? 'Tutte le categorie' : c}</option>)}
+          {categories.map(c => <option key={c} value={c}>{c === 'Tutte' ? 'Tutte le categorie' : c}</option>)}
         </select>
         <input value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="Filtro sede..." className={ui.input} />
         <input value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} placeholder="Filtro reparto..." className={ui.input} />
