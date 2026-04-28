@@ -69,7 +69,9 @@ export default function TicketDetail() {
     if (isAdmin) {
       api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
     }
-    getAssets({ limit: 300 }).then((r) => setAssets(r.data.items || [])).catch(() => {})
+    getAssets({ limit: 100 }).then((r) => setAssets(r.data.items || [])).catch(() => {
+      toast.error('Errore nel caricamento asset disponibili')
+    })
   }, [id])
 
   async function loadTicket() {
