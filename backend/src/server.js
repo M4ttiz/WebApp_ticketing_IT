@@ -86,8 +86,15 @@ app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const message = err.isOperational ? err.message : 'Errore interno del server';
 
-  if (statusCode === 500 && process.env.NODE_ENV !== 'production') {
-    console.error('❌ Server Error:', err);
+  if (statusCode === 500) {
+    console.error('❌ Server Error:', {
+      method: req.method,
+      path: req.originalUrl,
+      message: err.message,
+      name: err.name,
+      code: err.code,
+      stack: err.stack,
+    });
   }
 
   res.status(statusCode).json({
