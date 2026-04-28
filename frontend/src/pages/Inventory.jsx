@@ -103,10 +103,7 @@ export default function Inventory() {
           <p className={ui.subtleText}>Gestione asset hardware e dispositivi</p>
         </div>
         {(isAdmin || user?.role === 'technician') && (
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-white transition-colors"
-          >
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-white transition-colors">
             <Plus size={16} /> Aggiungi asset
           </button>
         )}
@@ -123,18 +120,10 @@ export default function Inventory() {
             className={`${ui.input} pl-9`}
           />
         </div>
-        <select
-          value={categoryFilter}
-          onChange={e => { setCategoryFilter(e.target.value); setPage(1) }}
-          className={ui.select}
-        >
+        <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1) }} className={ui.select}>
           {CATEGORIES.map(c => <option key={c} value={c}>{c === 'Tutte' ? 'Tutte le categorie' : c}</option>)}
         </select>
-        <select
-          value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-          className={ui.select}
-        >
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }} className={ui.select}>
           {STATUSES.map(s => <option key={s} value={s}>{s === 'Tutti' ? 'Tutti gli stati' : s.replace('_', ' ')}</option>)}
         </select>
       </div>
@@ -191,16 +180,10 @@ export default function Inventory() {
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={e => { e.stopPropagation(); openEdit(asset) }}
-                        className="text-primary-400 hover:text-primary-300 text-xs mr-3"
-                      >
+                      <button onClick={e => { e.stopPropagation(); openEdit(asset) }} className="text-primary-400 hover:text-primary-300 text-xs mr-3">
                         Modifica
                       </button>
-                      <button
-                        onClick={e => { e.stopPropagation(); setConfirmDelete(asset) }}
-                        className="text-rose-400 hover:text-rose-300 text-xs"
-                      >
+                      <button onClick={e => { e.stopPropagation(); setConfirmDelete(asset) }} className="text-rose-400 hover:text-rose-300 text-xs">
                         Elimina
                       </button>
                     </td>
@@ -216,40 +199,18 @@ export default function Inventory() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/50">
             <span className="text-xs text-slate-400">Pagina {page} di {totalPages}</span>
             <div className="flex gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="p-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 transition-colors"
-              >
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 transition-colors">
                 <ChevronLeft size={16} />
               </button>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="p-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 transition-colors"
-              >
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 transition-colors">
                 <ChevronRight size={16} />
               </button>
             </div>
         )}
       </div>
 
-      <AssetModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        asset={editingAsset}
-        onSaved={() => fetchAssets(page)}
-      />
-
-      <ConfirmModal
-        isOpen={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        onConfirm={() => handleDelete(confirmDelete?.id)}
-        title="Elimina asset"
-        message={`Sei sicuro di voler eliminare "${confirmDelete?.name}"? Questa azione è irreversibile.`}
-        confirmText="Elimina"
-        danger
-      />
+      <AssetModal isOpen={modalOpen} onClose={() => setModalOpen(false)} asset={editingAsset} onSaved={() => fetchAssets(page)} />
+      <ConfirmModal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} onConfirm={() => handleDelete(confirmDelete?.id)} title="Elimina asset" message={`Sei sicuro di voler eliminare "${confirmDelete?.name}"? Questa azione è irreversibile.`} confirmText="Elimina" danger />
     </div>
   )
 }

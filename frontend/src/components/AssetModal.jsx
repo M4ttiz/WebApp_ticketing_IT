@@ -87,6 +87,8 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
     }
   }
 
+  if (!isOpen) return null
+
   return (
     <AnimatePresence>
       {isOpen && (
