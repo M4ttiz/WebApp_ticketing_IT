@@ -84,10 +84,7 @@ export default function AssetDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/inventory')}
-            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
-          >
+          <button onClick={() => navigate('/inventory')} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -97,22 +94,14 @@ export default function AssetDetail() {
                 {asset.status.replace('_', ' ')}
               </span>
             </div>
-            <p className="text-sm text-slate-400">
-              {asset.category} {asset.assetTag ? `· ${asset.assetTag}` : ''}
-            </p>
+            <p className="text-sm text-slate-400">{asset.category} {asset.assetTag ? `· ${asset.assetTag}` : ''}</p>
           </div>
         {isAdmin && (
           <div className="flex gap-2">
-            <button
-              onClick={() => setModalOpen(true)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors"
-            >
+            <button onClick={() => setModalOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors">
               <Edit size={16} /> Modifica
             </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors"
-            >
+            <button onClick={() => setConfirmDelete(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors">
               <Trash2 size={16} /> Elimina
             </button>
           </div>
@@ -172,11 +161,7 @@ export default function AssetDetail() {
                       </div>
                     </Link>
                     {isAdmin && (
-                      <button
-                        onClick={() => handleUnlink(ta.ticket.id)}
-                        className="ml-3 p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                        title="Scollega ticket"
-                      >
+                      <button onClick={() => handleUnlink(ta.ticket.id)} className="ml-3 p-1.5 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Scollega ticket">
                         <Unlink size={14} />
                       </button>
                     )}
@@ -209,31 +194,14 @@ export default function AssetDetail() {
 
           <div className={ui.cardSection}>
             <h3 className="text-sm font-semibold text-slate-200 mb-3">Azioni rapide</h3>
-            <Link
-              to="/tickets/new"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors"
-            >
+            <Link to="/tickets/new" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors">
               <LinkIcon size={14} /> Apri ticket su questo asset
             </Link>
           </div>
       </div>
 
-      <AssetModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        asset={asset}
-        onSaved={fetchAsset}
-      />
-
-      <ConfirmModal
-        isOpen={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={handleDelete}
-        title="Elimina asset"
-        message={`Sei sicuro di voler eliminare "${asset.name}"?`}
-        confirmText="Elimina"
-        danger
-      />
+      <AssetModal isOpen={modalOpen} onClose={() => setModalOpen(false)} asset={asset} onSaved={fetchAsset} />
+      <ConfirmModal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={handleDelete} title="Elimina asset" message={`Sei sicuro di voler eliminare "${asset.name}"?`} confirmText="Elimina" danger />
     </div>
   )
 }
