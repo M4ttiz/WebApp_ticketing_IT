@@ -53,6 +53,7 @@ app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/settings', require('./routes/settings.routes'));
 app.use('/api/upload', require('./routes/upload.routes'));
 app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/assets', require('./routes/assets'));
 
 // ─── Health Check ──────────────────────────
 app.get('/api/health', (req, res) => {

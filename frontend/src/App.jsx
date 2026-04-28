@@ -10,6 +10,8 @@ import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Profile from './pages/Profile'
 import Categories from './pages/Categories'
+import Inventory from './pages/Inventory'
+import AssetDetail from './pages/AssetDetail'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
@@ -50,6 +52,10 @@ function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/settings" element={<Settings />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['admin', 'technician']} />}>
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/inventory/:id" element={<AssetDetail />} />
             </Route>
           </Route>
         </Route>

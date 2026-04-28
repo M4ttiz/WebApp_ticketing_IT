@@ -6,7 +6,7 @@ import {
   Ticket,
   Users,
   Settings,
-  FolderKanban,
+  FolderKanban,\n  Server,
   Menu,
   X,
   LogOut,
@@ -18,6 +18,7 @@ const navItems = [
   { to: '/users', label: 'Utenti', icon: Users, roles: ['admin'] },
   { to: '/categories', label: 'Categorie', icon: FolderKanban, roles: ['admin'] },
   { to: '/settings', label: 'Impostazioni', icon: Settings, roles: ['admin'] },
+  { to: '/inventory', label: 'Inventario IT', icon: Server, roles: ['admin', 'technician'] },
 ]
 
 export default function Sidebar() {

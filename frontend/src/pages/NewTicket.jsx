@@ -8,6 +8,7 @@ import PriorityBadge from '../components/PriorityBadge'
 import { toast } from 'sonner'
 import { ChevronRight, ChevronLeft, Send, CheckCircle2 } from 'lucide-react'
 import { ui } from '../lib/utils'
+import { getAssets, linkTicket } from '../api/assets'
 
 const STEPS = [
   { id: 1, label: 'Categoria e priorità' },
@@ -27,11 +28,14 @@ export default function NewTicket() {
     title: '',
     description: '',
     files: [],
+    assetId: '',
   })
+  const [assets, setAssets] = useState([])
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     api.get('/categories').then((r) => setCategories(r.data)).catch(() => {})
+    getAssets({ status: 'DISPONIBILE', limit: 100 }).then((r) => setAssets(r.data.items || [])).catch(() => {})
   }, [])
 
   const update = (field, value) => setForm((p) => ({ ...p, [field]: value }))
@@ -55,6 +59,16 @@ export default function NewTicket() {
       form.files.forEach((f) => data.append('attachments', f))
 
       const res = await api.post('/tickets', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+      
+      // Link asset se selezionato
+      if (form.assetId) {
+        try {
+          await linkTicket(form.assetId, res.data.id)
+        } catch (e) {
+          console.error('Errore collegamento asset:', e)
+        }
+      }
+      
       toast.success('Ticket creato con successo')
       navigate(`/tickets/${res.data.id}`)
     } catch (e) {
@@ -120,6 +134,20 @@ export default function NewTicket() {
                 {categoryError && (
                   <p className="mt-1 text-xs text-rose-400">Seleziona una categoria.</p>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Asset collegato (opzionale)</label>
+                <select
+                  value={form.assetId}
+                  onChange={(e) => update('assetId', e.target.value)}
+                  className={ui.select}
+                >
+                  <option value="">Nessun asset</option>
+                  {assets.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name} {a.assetTag ? `(${a.assetTag})` : ''}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">Seleziona il dispositivo su cui riscontri il problema</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Priorità</label>
