@@ -12,6 +12,7 @@ const CATEGORY_COLORS = {
   DESKTOP: 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/40',
   MONITOR: 'from-violet-500/20 to-violet-600/20 border-violet-500/40',
   STAMPANTE: 'from-amber-500/20 to-amber-600/20 border-amber-500/40',
+  ACCESS_POINT: 'from-teal-500/20 to-teal-600/20 border-teal-500/40',
   SERVER: 'from-rose-500/20 to-rose-600/20 border-rose-500/40',
   SWITCH: 'from-indigo-500/20 to-indigo-600/20 border-indigo-500/40',
   ROUTER: 'from-fuchsia-500/20 to-fuchsia-600/20 border-fuchsia-500/40',
@@ -21,7 +22,7 @@ const CATEGORY_COLORS = {
 }
 
 const CATEGORIES = [
-  'Tutte', 'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE',
+  'Tutte', 'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT',
   'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO'
 ]
 
@@ -47,7 +48,7 @@ export default function Inventory() {
     try {
       const params = {
         page: 1,
-        limit: 500,
+        limit: 100,
         ...(search && { search }),
         ...(categoryFilter !== 'Tutte' && { category: categoryFilter }),
       }

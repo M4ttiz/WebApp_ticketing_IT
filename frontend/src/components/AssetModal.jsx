@@ -6,7 +6,7 @@ import { createAsset, updateAsset } from '../api/assets'
 import { ui } from '../lib/utils'
 
 const CATEGORIES = [
-  'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE',
+  'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT',
   'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO'
 ]
 
