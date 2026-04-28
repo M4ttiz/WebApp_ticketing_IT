@@ -9,12 +9,11 @@ RUN npm install --legacy-peer-deps || npm install
 COPY prisma ./prisma
 COPY src ./src
 COPY .env ./
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Generate Prisma client and fail build if it cannot be generated
 RUN npx prisma generate
-
-# Keep runtime image slimmer after Prisma client generation
-RUN npm prune --omit=dev
+RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 5000
-CMD ["node", "src/server.js"]
+CMD ["./docker-entrypoint.sh"]

@@ -40,6 +40,31 @@ async function createNotification(userId, title, message, ticketId = null) {
   });
 }
 
+async function linkAssetToTicket(ticketId, assetId) {
+  if (assetId === undefined) return;
+
+  // Always keep a single primary asset link per ticket.
+  await prisma.ticketAsset.deleteMany({ where: { ticketId } });
+
+  if (assetId === null) return;
+
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    select: { id: true },
+  });
+
+  if (!asset) {
+    throw new NotFoundError('Asset');
+  }
+
+  await prisma.ticketAsset.create({
+    data: {
+      ticketId,
+      assetId,
+    },
+  });
+}
+
 /**
  * GET /api/tickets
  * List tickets — filtered by role with advanced filters.
@@ -248,6 +273,19 @@ async function getTicket(req, res, next) {
       where: { id: ticketId },
       include: {
         ...ticketIncludes,
+        assets: {
+          include: {
+            asset: {
+              select: {
+                id: true,
+                name: true,
+                assetTag: true,
+                category: true,
+                model: true,
+              },
+            },
+          },
+        },
         attachments: {
           include: { uploader: { select: { id: true, firstName: true, lastName: true } } },
           orderBy: { createdAt: 'asc' },
@@ -407,7 +445,7 @@ async function changeStatus(req, res, next) {
 async function assignTicket(req, res, next) {
   try {
     const ticketId = parseInt(req.params.id);
-    const { assigneeId } = req.body;
+    const { assigneeId, assetId } = req.body;
     const { id: userId } = req.user;
 
     const ticket = await prisma.ticket.findUnique({
@@ -458,6 +496,8 @@ async function assignTicket(req, res, next) {
       include: ticketIncludes,
     });
 
+    await linkAssetToTicket(ticketId, assetId === undefined ? undefined : (assetId || null));
+
     res.json(updated);
   } catch (error) {
     next(error);
@@ -472,6 +512,7 @@ async function selfAssignTicket(req, res, next) {
   try {
     const ticketId = parseInt(req.params.id);
     const userId = req.user.id;
+    const { assetId } = req.body;
 
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) {
@@ -491,6 +532,7 @@ async function selfAssignTicket(req, res, next) {
       include: ticketIncludes,
     });
 
+    await linkAssetToTicket(ticketId, assetId === undefined ? undefined : (assetId || null));
     await createAuditLog(ticketId, userId, 'Ticket preso in carico', 'Nessuno', `${req.user.firstName} ${req.user.lastName}`);
 
     res.json(updated);

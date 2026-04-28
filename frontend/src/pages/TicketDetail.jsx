@@ -8,6 +8,7 @@ import CommentThread from '../components/CommentThread'
 import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
+import { getAssets } from '../api/assets'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ui } from '../lib/utils'
@@ -57,6 +58,8 @@ export default function TicketDetail() {
   const [statusModal, setStatusModal] = useState(null)
   const [agents, setAgents] = useState([])
   const [assigneeId, setAssigneeId] = useState('')
+  const [assets, setAssets] = useState([])
+  const [assetId, setAssetId] = useState('')
 
   const isAdmin = user?.role === 'admin'
   const isAgent = user?.role === 'admin' || user?.role === 'technician'
@@ -66,6 +69,7 @@ export default function TicketDetail() {
     if (isAdmin) {
       api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
     }
+    getAssets({ limit: 300 }).then((r) => setAssets(r.data.items || [])).catch(() => {})
   }, [id])
 
   async function loadTicket() {
@@ -78,6 +82,7 @@ export default function TicketDetail() {
       setTicket(tRes.data)
       setMessages(mRes.data)
       setAssigneeId(tRes.data.assigneeId || '')
+      setAssetId(tRes.data.assets?.[0]?.asset?.id || '')
     } catch (e) {
       toast.error('Errore nel caricamento del ticket')
     } finally {
@@ -103,6 +108,9 @@ export default function TicketDetail() {
 
   async function changeStatus(status) {
     try {
+      if (status === 'IN_LAVORAZIONE' && isAgent && !ticket.assigneeId) {
+        await api.post(`/tickets/${id}/assign`, { assetId: assetId || null })
+      }
       await api.patch(`/tickets/${id}/status`, { status })
       toast.success('Stato aggiornato')
       setStatusModal(null)
@@ -114,7 +122,7 @@ export default function TicketDetail() {
 
   async function assign() {
     try {
-      await api.patch(`/tickets/${id}/assign`, { assigneeId: assigneeId || null })
+      await api.patch(`/tickets/${id}/assign`, { assigneeId: assigneeId || null, assetId: assetId || null })
       toast.success('Assegnazione aggiornata')
       loadTicket()
     } catch (e) {
@@ -153,6 +161,7 @@ export default function TicketDetail() {
             <span>Richiedente: <strong className="text-slate-200">{ticket.requester?.firstName} {ticket.requester?.lastName}</strong></span>
             <span>Assegnato a: <strong className="text-slate-200">{ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : '—'}</strong></span>
             <span>Creato: <strong className="text-slate-200">{format(new Date(ticket.createdAt), 'dd MMM yyyy HH:mm', { locale: it })}</strong></span>
+            <span>Asset: <strong className="text-slate-200">{ticket.assets?.[0]?.asset?.name || '—'}</strong></span>
           </div>
         </div>
 
@@ -173,26 +182,47 @@ export default function TicketDetail() {
       </div>
 
       {/* Admin assign */}
-      {isAdmin && (
-        <div className={`${ui.cardSection} flex flex-col items-start gap-3 sm:flex-row sm:items-center`}>
+      {isAgent && (
+        <div className={`${ui.cardSection} flex flex-col items-start gap-3`}>
           <UserCheck size={18} className="text-primary-400 shrink-0" />
-          <span className="text-sm font-medium">Assegna a:</span>
-          <select
-            value={assigneeId}
-            onChange={(e) => setAssigneeId(e.target.value)}
-            className={`${ui.select} flex-1`}
-          >
-            <option value="">Non assegnato</option>
-            {agents.map((a) => (
-              <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
-            ))}
-          </select>
-          <button
-            onClick={assign}
-            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            Salva
-          </button>
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {isAdmin && (
+              <div>
+                <span className="text-sm font-medium">Assegna a:</span>
+                <select
+                  value={assigneeId}
+                  onChange={(e) => setAssigneeId(e.target.value)}
+                  className={`${ui.select} mt-1`}
+                >
+                  <option value="">Non assegnato</option>
+                  {agents.map((a) => (
+                    <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div>
+              <span className="text-sm font-medium">Asset collegato:</span>
+              <select
+                value={assetId}
+                onChange={(e) => setAssetId(e.target.value)}
+                className={`${ui.select} mt-1`}
+              >
+                <option value="">Nessun asset</option>
+                {assets.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name} {a.assetTag ? `(${a.assetTag})` : ''}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={assign}
+              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Salva assegnazione
+            </button>
+          )}
         </div>
       )}
 

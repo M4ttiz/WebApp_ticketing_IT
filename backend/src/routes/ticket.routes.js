@@ -106,6 +106,9 @@ router.patch(
     body('assigneeId')
       .optional({ nullable: true })
       .isUUID().withMessage('ID agente non valido'),
+    body('assetId')
+      .optional({ nullable: true })
+      .isUUID().withMessage('ID asset non valido'),
   ],
   validate,
   ticketController.assignTicket
@@ -115,7 +118,12 @@ router.patch(
 router.post(
   '/:id/assign',
   requireRole(['technician', 'admin']),
-  [param('id').isInt()],
+  [
+    param('id').isInt(),
+    body('assetId')
+      .optional({ nullable: true })
+      .isUUID().withMessage('ID asset non valido'),
+  ],
   validate,
   ticketController.selfAssignTicket
 );

@@ -253,28 +253,18 @@ export default function Inventory() {
                         <th className="px-3 py-2 font-medium">SEDE</th>
                         <th className="px-3 py-2 font-medium">REPARTO</th>
                         <th className="px-3 py-2 font-medium">NOTE</th>
-                        <th className="px-3 py-2 font-medium text-right">Azioni</th>
                       </tr>
                     </thead>
                     <tbody>
                       {list.map((asset) => (
                         <tr key={asset.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
                           <td className="bg-blue-600/80" />
-                          <td className="px-3 py-2">
-                            <div className="font-medium">{asset.name || '-'}</div>
-                            <div className="text-xs text-slate-500">Codice: {asset.assetTag || '-'}</div>
-                          </td>
+                          <td className="px-3 py-2 font-medium">{asset.name || '-'}</td>
                           <td className="px-3 py-2 text-slate-300">{asset.model || '-'}</td>
                           <td className="px-3 py-2 text-slate-300">{asset.category || '-'}</td>
                           <td className="px-3 py-2 text-slate-300">{asset.location || '-'}</td>
                           <td className="px-3 py-2 text-slate-300">{asset.assignedTo || '-'}</td>
                           <td className="px-3 py-2 text-slate-400 max-w-sm truncate">{asset.notes || '-'}</td>
-                          <td className="px-3 py-2 text-right">
-                            <button onClick={() => openEdit(asset)} className="text-primary-400 hover:text-primary-300 text-xs mr-3">Modifica</button>
-                            {isAdmin && (
-                              <button onClick={() => setConfirmDelete(asset)} className="text-rose-400 hover:text-rose-300 text-xs">Elimina</button>
-                            )}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
