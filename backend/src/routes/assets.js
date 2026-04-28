@@ -27,6 +27,20 @@ router.get(
   assetController.listAssets
 );
 
+// GET /api/assets/analytics/top-open-tickets — KPI by product
+router.get(
+  '/analytics/top-open-tickets',
+  [
+    query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit non valido'),
+    query('category').optional().isIn(['LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO']).withMessage('Categoria non valida'),
+    query('location').optional().trim().isLength({ max: 200 }).withMessage('Sede troppo lunga'),
+    query('department').optional().trim().isLength({ max: 200 }).withMessage('Reparto troppo lungo'),
+    query('search').optional().trim().isLength({ max: 200 }).withMessage('Ricerca troppo lunga'),
+  ],
+  validate,
+  assetController.topOpenTicketsByProduct
+);
+
 // GET /api/assets/:id — Get asset detail with linked tickets
 router.get(
   '/:id',
@@ -66,6 +80,13 @@ router.put(
   ],
   validate,
   assetController.updateAsset
+);
+
+// DELETE /api/assets/reset — Full reset inventory data/config
+router.delete(
+  '/reset',
+  requireRole(['admin']),
+  assetController.resetInventory
 );
 
 // DELETE /api/assets/:id — Delete asset (admin only)

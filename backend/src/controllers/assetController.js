@@ -57,7 +57,10 @@ async function listAssets(req, res, next) {
         where,
         take: limit,
         skip,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { assetTag: 'asc' },
+          { name: 'asc' },
+        ],
         select: ASSET_SELECT,
       }),
       prisma.asset.count({ where }),
@@ -72,6 +75,82 @@ async function listAssets(req, res, next) {
         totalPages: Math.ceil(total / limit),
       },
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/assets/analytics/top-open-tickets
+ * KPI Top prodotti per ticket aperti
+ */
+async function topOpenTicketsByProduct(req, res, next) {
+  try {
+    const { category, location, department, search } = req.query;
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 10));
+
+    const where = {};
+    if (category) where.category = category;
+    if (location) where.location = { contains: location, mode: 'insensitive' };
+    if (department) where.assignedTo = { contains: department, mode: 'insensitive' };
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { model: { contains: search, mode: 'insensitive' } },
+        { assetTag: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const assets = await prisma.asset.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        model: true,
+        category: true,
+        location: true,
+        assignedTo: true,
+        assetTag: true,
+      },
+    });
+
+    if (!assets.length) {
+      return res.json({ items: [] });
+    }
+
+    const assetIds = assets.map((asset) => asset.id);
+    const openStatuses = ['APERTO', 'IN_LAVORAZIONE', 'IN_ATTESA'];
+
+    const grouped = await prisma.ticketAsset.groupBy({
+      by: ['assetId'],
+      where: {
+        assetId: { in: assetIds },
+        ticket: { status: { in: openStatuses } },
+      },
+      _count: { ticketId: true },
+    });
+
+    const countsByAsset = new Map(grouped.map((g) => [g.assetId, g._count.ticketId]));
+
+    const items = assets
+      .map((asset) => ({
+        id: asset.id,
+        descrizione: asset.name,
+        modello: asset.model || '-',
+        categoria: asset.category,
+        sede: asset.location || '-',
+        reparto: asset.assignedTo || '-',
+        codiceProdotto: asset.assetTag || '',
+        openTickets: countsByAsset.get(asset.id) || 0,
+      }))
+      .filter((item) => item.openTickets > 0)
+      .sort((a, b) => {
+        if (b.openTickets !== a.openTickets) return b.openTickets - a.openTickets;
+        return a.codiceProdotto.localeCompare(b.codiceProdotto, 'it');
+      })
+      .slice(0, limit);
+
+    return res.json({ items });
   } catch (err) {
     next(err);
   }
@@ -298,6 +377,37 @@ async function unlinkTicket(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/assets/reset
+ * Reset completo inventario dati/configurazioni
+ */
+async function resetInventory(req, res, next) {
+  try {
+    await prisma.$transaction([
+      prisma.ticketAsset.deleteMany({}),
+      prisma.asset.deleteMany({}),
+      prisma.setting.deleteMany({
+        where: {
+          OR: [
+            { key: { startsWith: 'inventory.' } },
+            { key: { startsWith: 'inventory_' } },
+            { key: { startsWith: 'warehouse.' } },
+            { key: { startsWith: 'warehouse_' } },
+            { key: { startsWith: 'tracking.' } },
+            { key: { startsWith: 'tracking_' } },
+          ],
+        },
+      }),
+    ]);
+
+    res.json({
+      message: 'Inventario azzerato con successo',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listAssets,
   getAsset,
@@ -306,4 +416,6 @@ module.exports = {
   deleteAsset,
   linkTicket,
   unlinkTicket,
+  topOpenTicketsByProduct,
+  resetInventory,
 };
