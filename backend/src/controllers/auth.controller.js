@@ -17,9 +17,15 @@ const { UnauthorizedError, NotFoundError, AppError } = require('../utils/errors'
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+    // #region agent log
+    fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H2',location:'auth.controller.js:21',message:'Login handler entered',data:{emailProvided:Boolean(email),passwordProvided:Boolean(password)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     // Find user
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    // #region agent log
+    fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H3',location:'auth.controller.js:26',message:'User lookup completed',data:{userFound:Boolean(user),isDeleted:user?.isDeleted??null,isActive:user?.isActive??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!user || user.isDeleted) {
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
@@ -52,6 +58,9 @@ async function login(req, res, next) {
       user: sanitizeUser(user),
     });
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H4',location:'auth.controller.js:61',message:'Login handler exception',data:{name:error?.name||null,code:error?.code||null,message:error?.message||null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     next(error);
   }
 }

@@ -57,6 +57,9 @@ app.use('/api/assets', require('./routes/assets'));
 
 // ─── Health Check ──────────────────────────
 app.get('/api/health', (req, res) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H1',location:'server.js:61',message:'Health endpoint reached',data:{method:req.method,path:req.originalUrl},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -69,6 +72,9 @@ app.get('/api/health', (req, res) => {
 
 // ─── Global Error Handler ──────────────────
 app.use((err, req, res, next) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H4',location:'server.js:76',message:'Global error handler reached',data:{method:req.method,path:req.originalUrl,statusCode:err?.statusCode||500,name:err?.name||null,code:err?.code||null,message:err?.message||null},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   // Multer file size error
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
@@ -111,6 +117,9 @@ app.use((req, res) => {
 
 // ─── Start Server ──────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H1',location:'server.js:119',message:'Backend server startup callback',data:{port:PORT,nodeEnv:process.env.NODE_ENV||'development'},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   console.log(`
 ╔══════════════════════════════════════════════╗
 ║       🎫 IT Ticketing API Server             ║
