@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import {
   ArrowLeft, Server, Edit, Trash2, Link as LinkIcon, Unlink,
   Calendar, MapPin, User, Monitor, Cpu, Hash, FileText, Ticket,
@@ -96,6 +95,7 @@ export default function AssetDetail() {
             </div>
             <p className="text-sm text-slate-400">{asset.category} {asset.assetTag ? `· ${asset.assetTag}` : ''}</p>
           </div>
+        </div>
         {isAdmin && (
           <div className="flex gap-2">
             <button onClick={() => setModalOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors">
@@ -170,7 +170,7 @@ export default function AssetDetail() {
               </div>
             )}
           </div>
-
+        </div>
         {/* Sidebar */}
         <div className="space-y-6">
           <div className={ui.cardSection}>
@@ -191,6 +191,7 @@ export default function AssetDetail() {
                 </div>
               )}
             </div>
+          </div>
 
           <div className={ui.cardSection}>
             <h3 className="text-sm font-semibold text-slate-200 mb-3">Azioni rapide</h3>
@@ -198,10 +199,19 @@ export default function AssetDetail() {
               <LinkIcon size={14} /> Apri ticket su questo asset
             </Link>
           </div>
+        </div>
       </div>
 
       <AssetModal isOpen={modalOpen} onClose={() => setModalOpen(false)} asset={asset} onSaved={fetchAsset} />
-      <ConfirmModal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} onConfirm={handleDelete} title="Elimina asset" message={`Sei sicuro di voler eliminare "${asset.name}"?`} confirmText="Elimina" danger />
+      <ConfirmModal
+        open={confirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        title="Elimina asset"
+        message={`Sei sicuro di voler eliminare "${asset.name}"?`}
+        confirmText="Elimina"
+        danger
+      />
     </div>
   )
 }
@@ -217,6 +227,7 @@ function InfoRow({ icon, label, value, isDate, isExpired }) {
           {value}
           {isDate && isExpired && ' (scaduta)'}
         </div>
+      </div>
     </div>
   )
 }

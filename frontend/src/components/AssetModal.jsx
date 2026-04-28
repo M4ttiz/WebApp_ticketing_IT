@@ -206,6 +206,7 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
                     <label className="block text-sm font-medium text-slate-300 mb-1">Note</label>
                     <textarea value={form.notes} onChange={e => update('notes', e.target.value)} className={`${ui.textarea} resize-none`} rows={3} placeholder="Note aggiuntive..." />
                   </div>
+                </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
                   <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 transition-colors">
@@ -224,3 +225,4 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
     </AnimatePresence>
   )
 }
+

@@ -206,11 +206,20 @@ export default function Inventory() {
                 <ChevronRight size={16} />
               </button>
             </div>
+          </div>
         )}
       </div>
 
       <AssetModal isOpen={modalOpen} onClose={() => setModalOpen(false)} asset={editingAsset} onSaved={() => fetchAssets(page)} />
-      <ConfirmModal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} onConfirm={() => handleDelete(confirmDelete?.id)} title="Elimina asset" message={`Sei sicuro di voler eliminare "${confirmDelete?.name}"? Questa azione è irreversibile.`} confirmText="Elimina" danger />
+      <ConfirmModal
+        open={!!confirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => handleDelete(confirmDelete?.id)}
+        title="Elimina asset"
+        message={`Sei sicuro di voler eliminare "${confirmDelete?.name}"? Questa azione è irreversibile.`}
+        confirmText="Elimina"
+        danger
+      />
     </div>
   )
 }
