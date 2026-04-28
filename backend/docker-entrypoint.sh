@@ -24,7 +24,9 @@ END $$;
 SQL
 
 echo "[entrypoint] Syncing schema to database (db push)..."
-npx prisma db push --accept-data-loss --skip-generate
+if ! npx prisma db push --accept-data-loss --skip-generate; then
+  echo "[entrypoint] WARNING: prisma db push failed, continuing with existing schema."
+fi
 
 echo "[entrypoint] Starting backend..."
 node src/server.js
