@@ -20,6 +20,29 @@ const DEFAULT_ASSET_CATEGORIES = [
   'ALTRO',
 ];
 
+function normalizeCategory(value) {
+  return String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_');
+}
+
+function readAssetCategoryConfig(setting) {
+  const selectedRaw = Array.isArray(setting?.value?.selected) ? setting.value.selected : DEFAULT_ASSET_CATEGORIES;
+  const customRaw = Array.isArray(setting?.value?.custom) ? setting.value.custom : [];
+
+  const custom = [...new Set(customRaw.map(normalizeCategory).filter(Boolean))];
+  const available = [...new Set([...DEFAULT_ASSET_CATEGORIES, ...custom])];
+  const selected = [...new Set(selectedRaw.map(normalizeCategory).filter(Boolean))]
+    .filter((category) => available.includes(category));
+
+  return {
+    custom,
+    available,
+    selected: selected.length ? selected : available,
+  };
+}
+
 /**
  * GET /api/settings/smtp
  */
@@ -115,13 +138,12 @@ async function testSmtp(req, res, next) {
 async function getAssetCategories(req, res, next) {
   try {
     const setting = await prisma.setting.findUnique({ where: { key: 'asset.categories' } });
-    const selected = Array.isArray(setting?.value?.selected)
-      ? setting.value.selected.filter((c) => DEFAULT_ASSET_CATEGORIES.includes(c))
-      : DEFAULT_ASSET_CATEGORIES;
+    const config = readAssetCategoryConfig(setting);
 
     res.json({
-      available: DEFAULT_ASSET_CATEGORIES,
-      selected: selected.length ? selected : DEFAULT_ASSET_CATEGORIES,
+      available: config.available,
+      selected: config.selected,
+      custom: config.custom,
     });
   } catch (error) {
     next(error);
@@ -133,28 +155,39 @@ async function getAssetCategories(req, res, next) {
  */
 async function updateAssetCategories(req, res, next) {
   try {
-    const { selected } = req.body;
+    const { selected, custom = [] } = req.body;
     if (!Array.isArray(selected) || selected.length === 0) {
       throw new AppError('Seleziona almeno una categoria', 400);
     }
+    if (!Array.isArray(custom)) {
+      throw new AppError('Formato categorie personalizzate non valido', 400);
+    }
 
-    const normalized = selected
-      .map((item) => String(item || '').trim().toUpperCase())
-      .filter(Boolean);
+    const normalizedCustom = [...new Set(custom.map(normalizeCategory).filter(Boolean))];
+    const invalidCustom = normalizedCustom.filter((item) => item.length > 100);
+    if (invalidCustom.length > 0) {
+      throw new AppError('Una o più categorie personalizzate sono troppo lunghe', 400);
+    }
 
-    const uniqueSelected = [...new Set(normalized)];
-    const invalid = uniqueSelected.filter((c) => !DEFAULT_ASSET_CATEGORIES.includes(c));
+    const available = [...new Set([...DEFAULT_ASSET_CATEGORIES, ...normalizedCustom])];
+    const uniqueSelected = [...new Set(selected.map(normalizeCategory).filter(Boolean))];
+    const invalid = uniqueSelected.filter((c) => !available.includes(c));
     if (invalid.length > 0) {
       throw new AppError(`Categorie non valide: ${invalid.join(', ')}`, 400);
     }
 
     await prisma.setting.upsert({
       where: { key: 'asset.categories' },
-      update: { value: { selected: uniqueSelected } },
-      create: { key: 'asset.categories', value: { selected: uniqueSelected } },
+      update: { value: { selected: uniqueSelected, custom: normalizedCustom } },
+      create: { key: 'asset.categories', value: { selected: uniqueSelected, custom: normalizedCustom } },
     });
 
-    res.json({ message: 'Categorie asset aggiornate', selected: uniqueSelected });
+    res.json({
+      message: 'Categorie asset aggiornate',
+      selected: uniqueSelected,
+      custom: normalizedCustom,
+      available,
+    });
   } catch (error) {
     next(error);
   }

@@ -19,7 +19,7 @@ router.get(
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Page non valido'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit non valido'),
-    query('category').optional().isIn(['LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT', 'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO']).withMessage('Categoria non valida'),
+    query('category').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Categoria non valida'),
     query('status').optional().isIn(['DISPONIBILE', 'IN_USO', 'IN_MANUTENZIONE', 'DISMESSO', 'GUASTO']).withMessage('Stato non valido'),
     query('search').optional().trim().isLength({ max: 200 }).withMessage('Ricerca troppo lunga'),
   ],
@@ -32,7 +32,7 @@ router.get(
   '/analytics/top-open-tickets',
   [
     query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit non valido'),
-    query('category').optional().isIn(['LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT', 'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO']).withMessage('Categoria non valida'),
+    query('category').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Categoria non valida'),
     query('location').optional().trim().isLength({ max: 200 }).withMessage('Sede troppo lunga'),
     query('department').optional().trim().isLength({ max: 200 }).withMessage('Reparto troppo lungo'),
     query('search').optional().trim().isLength({ max: 200 }).withMessage('Ricerca troppo lunga'),
@@ -55,7 +55,7 @@ router.post(
   requireRole(['admin', 'technician']),
   [
     body('name').trim().notEmpty().withMessage('Nome obbligatorio').isLength({ max: 255 }).withMessage('Nome troppo lungo'),
-    body('category').notEmpty().withMessage('Categoria obbligatoria').isIn(['LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT', 'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO']).withMessage('Categoria non valida'),
+    body('category').trim().notEmpty().withMessage('Categoria obbligatoria').isLength({ max: 100 }).withMessage('Categoria non valida'),
     body('status').optional().isIn(['DISPONIBILE', 'IN_USO', 'IN_MANUTENZIONE', 'DISMESSO', 'GUASTO']).withMessage('Stato non valido'),
     body('serialNumber').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Seriale troppo lungo'),
     body('assetTag').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Tag troppo lungo'),
@@ -73,7 +73,7 @@ router.put(
   [
     param('id').isUUID().withMessage('ID asset non valido'),
     body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto').isLength({ max: 255 }).withMessage('Nome troppo lungo'),
-    body('category').optional().isIn(['LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT', 'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO']).withMessage('Categoria non valida'),
+    body('category').optional().trim().notEmpty().withMessage('Categoria non valida').isLength({ max: 100 }).withMessage('Categoria non valida'),
     body('status').optional().isIn(['DISPONIBILE', 'IN_USO', 'IN_MANUTENZIONE', 'DISMESSO', 'GUASTO']).withMessage('Stato non valido'),
     body('serialNumber').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Seriale troppo lungo'),
     body('assetTag').optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 100 }).withMessage('Tag troppo lungo'),

@@ -249,7 +249,7 @@ enum AssetStatus {
 model Asset {
   id             String        @id @default(uuid())
   name           String        @db.VarChar(255)
-  category       AssetCategory
+  category       String        @db.VarChar(100)
   brand          String?       @db.VarChar(100)
   model          String?       @db.VarChar(100)
   serialNumber   String?       @unique @map("serial_number") @db.VarChar(100)

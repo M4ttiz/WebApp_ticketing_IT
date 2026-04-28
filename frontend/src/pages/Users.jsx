@@ -59,11 +59,11 @@ export default function Users() {
   const deleteUser = async (id) => {
     try {
       await api.delete(`/users/${id}`)
-      toast.success('Utente eliminato')
+      toast.success('Utente cancellato definitivamente')
       setModal(null)
       fetchUsers()
     } catch (e) {
-      toast.error('Errore')
+      toast.error(e.response?.data?.error || 'Errore')
     }
   }
 
@@ -183,8 +183,8 @@ export default function Users() {
 
       <ConfirmModal
         open={modal?.type === 'delete'}
-        title="Elimina utente"
-        message={`Sei sicuro di voler eliminare ${modal?.user?.firstName} ${modal?.user?.lastName}? L'azione è irreversibile.`}
+        title="Cancella utente definitivamente"
+        message={`Confermi la cancellazione definitiva di ${modal?.user?.firstName} ${modal?.user?.lastName}?`}
         danger
         onConfirm={() => deleteUser(modal.user.id)}
         onCancel={() => setModal(null)}

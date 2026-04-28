@@ -87,7 +87,7 @@ router.patch(
   userController.updateUser
 );
 
-// DELETE /api/users/:id — Soft delete
+// DELETE /api/users/:id — Hard delete with constraints
 router.delete(
   '/:id',
   requireRole(['admin']),

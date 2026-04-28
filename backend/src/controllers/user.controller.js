@@ -194,7 +194,7 @@ async function updateUser(req, res, next) {
 
 /**
  * DELETE /api/users/:id
- * Soft delete (admin only).
+ * Hard delete when no requester tickets exist (admin only).
  */
 async function deleteUser(req, res, next) {
   try {
@@ -209,15 +209,29 @@ async function deleteUser(req, res, next) {
       throw new NotFoundError('Utente');
     }
 
-    await prisma.user.update({
-      where: { id: targetId },
-      data: { isDeleted: true, isActive: false },
-    });
+    const requestedCount = await prisma.ticket.count({ where: { requesterId: targetId } });
+    if (requestedCount > 0) {
+      throw new AppError(
+        'Impossibile eliminare: l\'utente ha ticket creati. Chiudi o trasferisci prima i ticket.',
+        400
+      );
+    }
 
-    // Invalidate all refresh tokens
-    await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
+    await prisma.$transaction([
+      prisma.ticket.updateMany({
+        where: { assigneeId: targetId },
+        data: { assigneeId: null },
+      }),
+      prisma.refreshToken.deleteMany({ where: { userId: targetId } }),
+      prisma.notification.deleteMany({ where: { userId: targetId } }),
+      prisma.auditLog.deleteMany({ where: { userId: targetId } }),
+      prisma.ticketHistory.deleteMany({ where: { userId: targetId } }),
+      prisma.attachment.deleteMany({ where: { uploaderId: targetId } }),
+      prisma.ticketMessage.deleteMany({ where: { authorId: targetId } }),
+      prisma.user.delete({ where: { id: targetId } }),
+    ]);
 
-    res.json({ message: 'Utente eliminato' });
+    res.json({ message: 'Utente cancellato definitivamente' });
   } catch (error) {
     next(error);
   }

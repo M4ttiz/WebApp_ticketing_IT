@@ -40,6 +40,8 @@ router.put(
   [
     body('selected').isArray({ min: 1 }).withMessage('Seleziona almeno una categoria'),
     body('selected.*').isString().withMessage('Valore categoria non valido'),
+    body('custom').optional().isArray().withMessage('Categorie personalizzate non valide'),
+    body('custom.*').optional().isString().withMessage('Categoria personalizzata non valida'),
   ],
   validate,
   settingsController.updateAssetCategories
