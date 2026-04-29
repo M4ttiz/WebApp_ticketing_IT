@@ -16,14 +16,15 @@ import AssetDetail from './pages/AssetDetail'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import RoutePermissionGuard, { HomeRedirect } from './components/RoutePermissionGuard'
 
 function App() {
   const { user, isInitializing } = useAuth()
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
+      <div className="flex min-h-screen items-center justify-center bg-surface-main text-text-primary">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-border-subtle border-t-accent" />
       </div>
     )
   }
@@ -31,12 +32,18 @@ function App() {
   return (
     <>
       <Toaster
-        position="top-right"
+        position="bottom-right"
+        duration={4000}
+        richColors={false}
         toastOptions={{
-          style: {
-            background: '#1e293b',
-            color: '#f1f5f9',
-            border: '1px solid #334155',
+          classNames: {
+            toast:
+              'group toast bg-surface-elevated border border-border-subtle text-text-primary shadow-elevated rounded-ds',
+            title: 'text-text-primary font-medium',
+            description: 'text-text-secondary text-sm',
+            success: '!border-l-[3px] !border-l-semantic-success',
+            error: '!border-l-[3px] !border-l-semantic-danger',
+            warning: '!border-l-[3px] !border-l-semantic-warning',
           },
         }}
       />
@@ -44,18 +51,17 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/" element={user?.role === 'user' ? <Navigate to="/tickets" replace /> : <Dashboard />} />
-            <Route path="/tickets" element={<TicketsList />} />
-            <Route path="/tickets/new" element={<NewTicket />} />
-            <Route path="/tickets/:id" element={<TicketDetail />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route element={<ProtectedRoute roles={['admin']} />}>
+            <Route element={<RoutePermissionGuard />}>
+              <Route path="/" element={<HomeRedirect />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/tickets" element={<TicketsList />} />
+              <Route path="/tickets/new" element={<NewTicket />} />
+              <Route path="/tickets/:id" element={<TicketDetail />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/users" element={<Users />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/asset-categories" element={<AssetCategoriesAdmin />} />
-            </Route>
-            <Route element={<ProtectedRoute roles={['admin', 'technician']} />}>
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/inventory/:id" element={<AssetDetail />} />
             </Route>
@@ -68,4 +74,3 @@ function App() {
 }
 
 export default App
-

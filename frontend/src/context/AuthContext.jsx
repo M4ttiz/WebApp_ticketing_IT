@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import api, { setAccessToken } from '../api/axios'
 
+// TODO: aggiungere "viewer" enum nel schema.prisma
+
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
@@ -8,7 +10,6 @@ export function AuthProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(true)
 
   useEffect(() => {
-    // Try refresh on mount
     async function init() {
       try {
         const res = await api.post('/auth/refresh')
@@ -39,7 +40,11 @@ export function AuthProvider({ children }) {
     window.location.href = '/login'
   }
 
-  return <AuthContext.Provider value={{ user, setUser, login, logout, isInitializing }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, setUser, login, logout, isInitializing }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export const useAuth = () => useContext(AuthContext)
