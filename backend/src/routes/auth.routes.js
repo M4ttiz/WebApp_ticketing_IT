@@ -16,7 +16,7 @@ router.post(
   '/login',
   loginLimiter,
   [
-    body('email').isEmail().withMessage('Email non valida').normalizeEmail(),
+    body('email').trim().notEmpty().withMessage('Username/Email obbligatorio'),
     body('password').notEmpty().withMessage('Password obbligatoria'),
   ],
   validate,

@@ -101,7 +101,13 @@ router.delete(
 router.post(
   '/:id/reset-password',
   requireRole(['admin']),
-  [param('id').isUUID()],
+  [
+    param('id').isUUID(),
+    body('newPassword')
+      .optional({ nullable: true, checkFalsy: true })
+      .isLength({ min: 8 })
+      .withMessage('La nuova password deve avere almeno 8 caratteri'),
+  ],
   validate,
   userController.adminResetPassword
 );

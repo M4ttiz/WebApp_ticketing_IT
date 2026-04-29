@@ -68,13 +68,28 @@ export default function Users() {
   }
 
   const resetPassword = async (id) => {
+    const target = users.find((u) => u.id === id)
+    const isDomainAccount = String(target?.email || '').includes('@')
     try {
-      const res = await api.post(`/users/${id}/reset-password`)
-      const tempPassword = res.data?.tempPassword
-      if (tempPassword) {
-        toast.success(`Password temporanea: ${tempPassword}`)
+      if (!isDomainAccount) {
+        const manualPassword = window.prompt('Inserisci la nuova password per utente locale (min 8 caratteri)')
+        if (!manualPassword) return
+        if (manualPassword.length < 8) {
+          toast.error('La password deve avere almeno 8 caratteri')
+          return
+        }
+        await api.post(`/users/${id}/reset-password`, { newPassword: manualPassword })
+        toast.success('Password locale aggiornata')
       } else {
-        toast.success('Password reimpostata')
+        const res = await api.post(`/users/${id}/reset-password`)
+        if (res.data?.emailSent) {
+          toast.success('Password temporanea inviata via email')
+        } else if (res.data?.tempPassword) {
+          // fallback in caso SMTP non disponibile
+          toast.success(`Email non inviata. Password temporanea: ${res.data.tempPassword}`)
+        } else {
+          toast.success('Password reimpostata')
+        }
       }
     } catch (e) {
       toast.error(e.response?.data?.error || 'Errore')
@@ -85,8 +100,15 @@ export default function Users() {
     try {
       const res = await api.post('/users', newUser)
       const tempPassword = res.data?.tempPassword
-      if (tempPassword) {
-        toast.success(`Utente creato. Password temporanea: ${tempPassword}`)
+      const domainAccount = !!newUser.email?.trim()
+      if (domainAccount) {
+        if (res.data?.emailSent) {
+          toast.success('Utente dominio creato. Password inviata via email')
+        } else {
+          toast.success(`Utente dominio creato. Email non inviata, password temporanea: ${tempPassword}`)
+        }
+      } else if (tempPassword) {
+        toast.success(`Utente locale creato. Password temporanea: ${tempPassword}`)
       } else {
         toast.success('Utente creato')
       }

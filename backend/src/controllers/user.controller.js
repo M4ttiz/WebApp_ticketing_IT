@@ -114,12 +114,12 @@ async function createUser(req, res, next) {
     ).slice(0, 40) || 'localuser';
     let resolvedEmail = normalizedEmail;
 
-    // For local users (without email), generate short editable username@local.user.
+    // For local users (without email), generate short editable username (no domain suffix).
     if (!resolvedEmail) {
-      let candidate = `${baseLocalUsername}@local.user`;
+      let candidate = baseLocalUsername;
       let suffix = 1;
       while (await prisma.user.findUnique({ where: { email: candidate } })) {
-        candidate = `${baseLocalUsername}${suffix}@local.user`;
+        candidate = `${baseLocalUsername}${suffix}`;
         suffix += 1;
       }
       resolvedEmail = candidate;
@@ -148,10 +148,11 @@ async function createUser(req, res, next) {
       select: userSelect,
     });
 
-    // Send welcome email only for real email accounts (not local placeholder accounts).
+    let emailSent = false;
+    // Send welcome email only for real email/domain accounts.
     if (normalizedEmail) {
       try {
-        sendEmail({
+        const result = await sendEmail({
           to: user.email,
           subject: '👋 Benvenuto in IT Ticketing — Il tuo account',
           html: emailTemplates.accountCreated(
@@ -160,12 +161,13 @@ async function createUser(req, res, next) {
             process.env.APP_URL
           ),
         });
+        emailSent = Boolean(result);
       } catch (e) {
         console.error('Failed to send welcome email:', e.message);
       }
     }
 
-    res.status(201).json({ user, tempPassword, localAccount: !normalizedEmail });
+    res.status(201).json({ user, tempPassword, localAccount: !normalizedEmail, emailSent });
   } catch (error) {
     next(error);
   }
@@ -293,13 +295,22 @@ async function deleteUser(req, res, next) {
 async function adminResetPassword(req, res, next) {
   try {
     const targetId = req.params.id;
+    const { newPassword } = req.body;
     const user = await prisma.user.findUnique({ where: { id: targetId } });
     if (!user || user.isDeleted) {
       throw new NotFoundError('Utente');
     }
 
-    // Generate temporary password
-    const tempPassword = crypto.randomBytes(6).toString('base64url').slice(0, 12);
+    const isDomainAccount = String(user.email || '').includes('@');
+
+    // Domain account: generated temporary password + email.
+    // Local account: admin provides password manually.
+    const tempPassword = isDomainAccount
+      ? crypto.randomBytes(6).toString('base64url').slice(0, 12)
+      : String(newPassword || '');
+    if (!isDomainAccount && tempPassword.length < 8) {
+      throw new AppError('Per utenti locali inserisci una password di almeno 8 caratteri', 400);
+    }
     const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     await prisma.user.update({
@@ -310,11 +321,10 @@ async function adminResetPassword(req, res, next) {
     // Invalidate refresh tokens
     await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
 
-    // Send email only for real email accounts (skip local placeholders).
-    const isLocalEmail = user.email?.endsWith('@local.user');
-    if (!isLocalEmail) {
+    let emailSent = false;
+    if (isDomainAccount) {
       try {
-        sendEmail({
+        const result = await sendEmail({
           to: user.email,
           subject: '🔑 Password reimpostata — IT Ticketing',
           html: emailTemplates.adminPasswordReset(
@@ -323,12 +333,18 @@ async function adminResetPassword(req, res, next) {
             process.env.APP_URL
           ),
         });
+        emailSent = Boolean(result);
       } catch (e) {
         console.error('Failed to send password reset email:', e.message);
       }
     }
 
-    res.json({ message: 'Password reimpostata', tempPassword, localAccount: isLocalEmail });
+    res.json({
+      message: 'Password reimpostata',
+      tempPassword: isDomainAccount ? tempPassword : null,
+      localAccount: !isDomainAccount,
+      emailSent,
+    });
   } catch (error) {
     next(error);
   }
