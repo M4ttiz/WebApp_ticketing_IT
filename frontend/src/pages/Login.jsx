@@ -15,8 +15,7 @@ export default function Login() {
 
   const validate = () => {
     const e = {}
-    if (!email.trim()) e.email = 'Email obbligatoria'
-    else if (!/^\S+@\S+\.\S+$/.test(email)) e.email = 'Email non valida'
+    if (!email.trim()) e.email = 'Username o email obbligatorio'
     if (!password) e.password = 'Password obbligatoria'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -67,17 +66,17 @@ export default function Login() {
 
           <form onSubmit={submit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Username o Email</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: null, general: null })) }}
                   className={`w-full pl-10 pr-3 py-2.5 rounded-lg bg-slate-900 border text-sm transition-colors ${
                     errors.email ? 'border-rose-500 focus:border-rose-500' : 'border-slate-700 focus:border-primary-500'
                   }`}
-                  placeholder="you@company.com"
+                  placeholder="nomeutente oppure you@company.com"
                 />
               </div>
               {errors.email && (
