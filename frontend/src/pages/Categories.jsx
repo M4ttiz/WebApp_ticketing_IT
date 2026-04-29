@@ -58,7 +58,7 @@ export default function Categories() {
   const deleteCategory = async (id) => {
     try {
       await api.delete(`/categories/${id}`)
-      toast.success('Categoria disattivata')
+      toast.success('Categoria eliminata')
       setModal(null)
       fetchCategories()
     } catch (e) {
@@ -150,8 +150,8 @@ export default function Categories() {
 
       <ConfirmModal
         open={modal?.type === 'delete'}
-        title="Disattiva categoria"
-        message={`Sei sicuro di voler disattivare "${modal?.category?.name}"? I ticket esistenti non saranno modificati.`}
+        title="Elimina categoria"
+        message={`Sei sicuro di voler eliminare "${modal?.category?.name}"? Tutti i ticket collegati verranno eliminati.`}
         danger
         onConfirm={() => deleteCategory(modal.category.id)}
         onCancel={() => setModal(null)}

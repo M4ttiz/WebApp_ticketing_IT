@@ -209,18 +209,19 @@ async function deleteUser(req, res, next) {
       throw new NotFoundError('Utente');
     }
 
-    const requestedCount = await prisma.ticket.count({ where: { requesterId: targetId } });
-    if (requestedCount > 0) {
-      throw new AppError(
-        'Impossibile eliminare: l\'utente ha ticket creati. Chiudi o trasferisci prima i ticket.',
-        400
-      );
-    }
-
     await prisma.$transaction([
       prisma.ticket.updateMany({
         where: { assigneeId: targetId },
         data: { assigneeId: null },
+      }),
+      // Delete tickets created by / assigned to this user so foreign keys don't block user deletion.
+      prisma.ticket.deleteMany({
+        where: {
+          OR: [
+            { requesterId: targetId },
+            { assigneeId: targetId },
+          ],
+        },
       }),
       prisma.refreshToken.deleteMany({ where: { userId: targetId } }),
       prisma.notification.deleteMany({ where: { userId: targetId } }),
