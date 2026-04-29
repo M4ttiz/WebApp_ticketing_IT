@@ -9,6 +9,25 @@ const { sendEmail } = require('../services/email.service');
 const emailTemplates = require('../utils/emailTemplates');
 const { NotFoundError, ForbiddenError, AppError } = require('../utils/errors');
 
+async function ensureViewerRoleExists() {
+  await prisma.$executeRawUnsafe(`
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'Role'
+  ) THEN
+    BEGIN
+      ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'viewer';
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END $$;
+  `);
+}
+
 
 const userSelect = {
   id: true,
@@ -81,6 +100,9 @@ async function listUsers(req, res, next) {
 async function createUser(req, res, next) {
   try {
     const { firstName, lastName, email, username, role = 'user', department } = req.body;
+    if (role === 'viewer') {
+      await ensureViewerRoleExists();
+    }
     const normalizedEmail = email?.toLowerCase().trim();
     const normalizeLocalUsername = (value) => String(value || '')
       .normalize('NFKD')
@@ -177,6 +199,9 @@ async function updateUser(req, res, next) {
   try {
     const { firstName, lastName, email, role, department, isActive } = req.body;
     const targetId = req.params.id;
+    if (role === 'viewer') {
+      await ensureViewerRoleExists();
+    }
 
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     if (!target || target.isDeleted) {
