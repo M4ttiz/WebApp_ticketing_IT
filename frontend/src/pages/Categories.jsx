@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react'
 import api from '../api/axios'
 import DataTable from '../components/DataTable'
 import ConfirmModal from '../components/ConfirmModal'
+import AdminTabs from '../components/AdminTabs'
+import Button from '../components/ui/Button'
+import { TextField } from '../components/ui/SelectField'
 import { toast } from 'sonner'
 import { FolderPlus, ToggleLeft, ToggleRight, Pencil, Trash2 } from 'lucide-react'
+import { ui } from '../lib/utils'
 
 export default function Categories() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: '', description: '' })
 
@@ -55,14 +59,17 @@ export default function Categories() {
     }
   }
 
-  const deleteCategory = async (id) => {
+  const performDelete = async () => {
+    const target = pendingDelete
+    if (!target?.id) return
+    const id = target.id
     try {
       await api.delete(`/categories/${id}`)
+      setCategories((prev) => prev.filter((c) => c.id !== id))
       toast.success('Categoria eliminata')
-      setModal(null)
-      fetchCategories()
+      setPendingDelete(null)
     } catch (e) {
-      toast.error('Errore')
+      toast.error(e.response?.data?.error || "Errore durante l'eliminazione della categoria")
     }
   }
 
@@ -74,9 +81,9 @@ export default function Categories() {
       key: 'active',
       label: 'Stato',
       render: (c) => (
-        <button onClick={() => toggleActive(c)} className="inline-flex items-center gap-1 text-sm">
-          {c.isActive ? <ToggleRight size={20} className="text-green-400" /> : <ToggleLeft size={20} className="text-slate-500" />}
-          <span className={c.isActive ? 'text-green-400' : 'text-slate-500'}>{c.isActive ? 'Attiva' : 'Disattivata'}</span>
+        <button type="button" onClick={() => toggleActive(c)} className="inline-flex items-center gap-1 text-sm">
+          {c.isActive ? <ToggleRight size={20} className="text-semantic-success" /> : <ToggleLeft size={20} className="text-text-disabled" />}
+          <span className={c.isActive ? 'text-semantic-success' : 'text-text-secondary'}>{c.isActive ? 'Attiva' : 'Disattivata'}</span>
         </button>
       ),
     },
@@ -86,14 +93,19 @@ export default function Categories() {
       render: (c) => (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setEditing(c); setForm({ name: c.name, description: c.description || '' }) }}
-            className="p-1.5 rounded hover:bg-slate-700 text-primary-400 transition-colors"
+            type="button"
+            onClick={() => {
+              setEditing(c)
+              setForm({ name: c.name, description: c.description || '' })
+            }}
+            className="rounded-ds p-1.5 text-accent transition-colors hover:bg-accent/10"
           >
             <Pencil size={16} />
           </button>
           <button
-            onClick={() => setModal({ type: 'delete', category: c })}
-            className="p-1.5 rounded hover:bg-rose-500/10 text-rose-400 transition-colors"
+            type="button"
+            onClick={() => setPendingDelete(c)}
+            className="rounded-ds p-1.5 text-semantic-danger transition-colors hover:bg-semantic-danger/10"
           >
             <Trash2 size={16} />
           </button>
@@ -103,45 +115,47 @@ export default function Categories() {
   ]
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6">
+      <AdminTabs className="mb-2" />
+
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold">Categorie</h1>
-          <p className="text-slate-400 text-sm">Gestisci le categorie dei ticket</p>
+          <h1 className="text-[20px] font-semibold tracking-tight text-text-primary">Categorie</h1>
+          <p className={ui.subtleText}>Gestisci le categorie dei ticket</p>
         </div>
-        <button
-          onClick={() => { setEditing(null); setForm({ name: '', description: '' }) }}
-          className="inline-flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        <Button
+          type="button"
+          onClick={() => {
+            setEditing(null)
+            setForm({ name: '', description: '' })
+          }}
         >
           <FolderPlus size={18} /> Nuova Categoria
-        </button>
+        </Button>
       </div>
 
-      {/* Create/Edit form */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-3">
-        <h3 className="text-sm font-semibold">{editing ? 'Modifica categoria' : 'Nuova categoria'}</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <input
+      <div className={`${ui.cardSection} space-y-4 border-border-subtle`}>
+        <h3 className="text-sm font-semibold text-text-primary">{editing ? 'Modifica categoria' : 'Nuova categoria'}</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField
             placeholder="Nome"
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
           />
-          <input
+          <TextField
             placeholder="Descrizione (opzionale)"
             value={form.description}
             onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
           />
         </div>
         <div className="flex gap-2">
-          <button onClick={save} className="px-4 py-2 rounded-lg text-sm bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors">
+          <Button type="button" onClick={save}>
             {editing ? 'Salva modifiche' : 'Crea'}
-          </button>
+          </Button>
           {editing && (
-            <button onClick={() => { setEditing(null); setForm({ name: '', description: '' }) }} className="px-4 py-2 rounded-lg text-sm bg-slate-700 hover:bg-slate-600 transition-colors">
+            <Button type="button" variant="secondary" onClick={() => { setEditing(null); setForm({ name: '', description: '' }) }}>
               Annulla
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -149,14 +163,14 @@ export default function Categories() {
       <DataTable columns={columns} data={categories} loading={loading} />
 
       <ConfirmModal
-        open={modal?.type === 'delete'}
+        open={!!pendingDelete}
         title="Elimina categoria"
-        message={`Sei sicuro di voler eliminare "${modal?.category?.name}"? Tutti i ticket collegati verranno eliminati.`}
+        message="Sei sicuro? Questa azione non è reversibile."
         danger
-        onConfirm={() => deleteCategory(modal.category.id)}
-        onCancel={() => setModal(null)}
+        confirmText="Elimina"
+        onConfirm={performDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   )
 }
-
