@@ -6,12 +6,14 @@ import PriorityBadge from '../components/PriorityBadge'
 import TicketTimeline from '../components/TicketTimeline'
 import CommentThread from '../components/CommentThread'
 import ConfirmModal from '../components/ConfirmModal'
+import Button from '../components/ui/Button'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
+import { normalizeRole } from '../lib/roles'
 import { getAssets } from '../api/assets'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { ui } from '../lib/utils'
+import { ui, cn } from '../lib/utils'
 import {
   ArrowLeft,
   MessageSquare,
@@ -29,20 +31,20 @@ import {
 
 const STATUS_FLOW = {
   APERTO: [
-    { value: 'IN_LAVORAZIONE', label: 'Prendi in carico', icon: Clock, color: 'bg-orange-500 hover:bg-orange-600' },
-    { value: 'RIFIUTATO', label: 'Rifiuta', icon: XCircle, color: 'bg-rose-500 hover:bg-rose-600' },
+    { value: 'IN_LAVORAZIONE', label: 'Prendi in carico', icon: Clock, color: 'bg-semantic-warning hover:bg-amber-600' },
+    { value: 'RIFIUTATO', label: 'Rifiuta', icon: XCircle, color: 'bg-semantic-danger hover:bg-red-600' },
   ],
   IN_LAVORAZIONE: [
-    { value: 'IN_ATTESA', label: 'Metti in attesa', icon: Clock, color: 'bg-yellow-500 hover:bg-yellow-600' },
-    { value: 'RISOLTO', label: 'Risolvi', icon: CheckCircle2, color: 'bg-green-500 hover:bg-green-600' },
+    { value: 'IN_ATTESA', label: 'Metti in attesa', icon: Clock, color: 'bg-semantic-warning hover:bg-amber-600' },
+    { value: 'RISOLTO', label: 'Risolvi', icon: CheckCircle2, color: 'bg-semantic-success hover:bg-emerald-600' },
   ],
   IN_ATTESA: [
-    { value: 'IN_LAVORAZIONE', label: 'Riprendi lavorazione', icon: Clock, color: 'bg-orange-500 hover:bg-orange-600' },
-    { value: 'CHIUSO', label: 'Chiudi', icon: Lock, color: 'bg-slate-500 hover:bg-slate-600' },
+    { value: 'IN_LAVORAZIONE', label: 'Riprendi lavorazione', icon: Clock, color: 'bg-semantic-warning hover:bg-amber-600' },
+    { value: 'CHIUSO', label: 'Chiudi', icon: Lock, color: 'bg-text-disabled hover:bg-slate-600' },
   ],
   RISOLTO: [
-    { value: 'CHIUSO', label: 'Chiudi definitivamente', icon: Lock, color: 'bg-slate-500 hover:bg-slate-600' },
-    { value: 'APERTO', label: 'Riapri', icon: RotateCcw, color: 'bg-blue-500 hover:bg-blue-600' },
+    { value: 'CHIUSO', label: 'Chiudi definitivamente', icon: Lock, color: 'bg-text-disabled hover:bg-slate-600' },
+    { value: 'APERTO', label: 'Riapri', icon: RotateCcw, color: 'bg-accent hover:bg-accent-hover' },
   ],
 }
 
@@ -50,6 +52,7 @@ export default function TicketDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const nr = normalizeRole(user?.role)
   const [ticket, setTicket] = useState(null)
   const [messages, setMessages] = useState([])
   const [content, setContent] = useState('')
@@ -63,26 +66,25 @@ export default function TicketDetail() {
   const [assetId, setAssetId] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const isAdmin = user?.role === 'admin'
-  const isAgent = user?.role === 'admin' || user?.role === 'technician'
+  const isAdmin = nr === 'admin'
+  const isAgent = nr === 'admin' || nr === 'agent'
 
   useEffect(() => {
     loadTicket()
-    if (isAdmin) {
+    if (user?.role === 'admin') {
       api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
     }
-    getAssets({ limit: 100 }).then((r) => setAssets(r.data.items || [])).catch(() => {
-      toast.error('Errore nel caricamento asset disponibili')
-    })
-  }, [id])
+    getAssets({ limit: 100 })
+      .then((r) => setAssets(r.data.items || []))
+      .catch(() => {
+        toast.error('Errore nel caricamento asset disponibili')
+      })
+  }, [id, user?.role])
 
   async function loadTicket() {
     setLoading(true)
     try {
-      const [tRes, mRes] = await Promise.all([
-        api.get(`/tickets/${id}`),
-        api.get(`/tickets/${id}/messages`),
-      ])
+      const [tRes, mRes] = await Promise.all([api.get(`/tickets/${id}`), api.get(`/tickets/${id}/messages`)])
       setTicket(tRes.data)
       setMessages(mRes.data)
       setAssigneeId(tRes.data.assigneeId || '')
@@ -104,7 +106,7 @@ export default function TicketDetail() {
       setIsInternal(false)
       toast.success('Commento inviato')
     } catch (e) {
-      toast.error('Errore nell\'invio del commento')
+      toast.error("Errore nell'invio del commento")
     } finally {
       setSending(false)
     }
@@ -137,8 +139,8 @@ export default function TicketDetail() {
   if (loading || !ticket) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-slate-700 rounded animate-pulse" />
-        <div className="h-64 bg-slate-700 rounded animate-pulse" />
+        <div className="h-8 w-48 animate-pulse rounded-ds bg-surface-hover" />
+        <div className="h-64 animate-pulse rounded-ds bg-surface-hover" />
       </div>
     )
   }
@@ -147,108 +149,129 @@ export default function TicketDetail() {
 
   return (
     <div className={ui.page}>
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
+      >
         <ArrowLeft size={16} /> Indietro
       </button>
 
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold">{ticket.ticketNumber}</h1>
-            <StatusBadge status={ticket.status} />
-            <PriorityBadge priority={ticket.priority} />
-          </div>
-          <h2 className="text-lg text-slate-100">{ticket.title}</h2>
-          <p className="mt-1 text-sm text-slate-400">{ticket.description}</p>
-          <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-400">
-            <span>Categoria: <strong className="text-slate-200">{ticket.category?.name}</strong></span>
-            <span>Richiedente: <strong className="text-slate-200">{ticket.requester?.firstName} {ticket.requester?.lastName}</strong></span>
-            <span>Assegnato a: <strong className="text-slate-200">{ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : '—'}</strong></span>
-            <span>Creato: <strong className="text-slate-200">{format(new Date(ticket.createdAt), 'dd MMM yyyy HH:mm', { locale: it })}</strong></span>
-            <span>Asset: <strong className="text-slate-200">{ticket.assets?.[0]?.asset?.name || '—'}</strong></span>
-          </div>
-        </div>
-
-        {/* Actions */}
-        {isAgent && (
-          <div className="flex flex-wrap gap-2">
-            {availableTransitions.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setStatusModal(t)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white transition-colors ${t.color}`}
-              >
-                <t.icon size={16} /> {t.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {isAdmin && (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 transition-colors"
-          >
-            <Trash2 size={16} /> Elimina ticket
-          </button>
-        )}
-      </div>
-
-      {/* Admin assign */}
-      {isAgent && (
-        <div className={`${ui.cardSection} flex flex-col items-start gap-3`}>
-          <UserCheck size={18} className="text-primary-400 shrink-0" />
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {isAdmin && (
-              <div>
-                <span className="text-sm font-medium">Assegna a:</span>
-                <select
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value)}
-                  className={`${ui.select} mt-1`}
-                >
-                  <option value="">Non assegnato</option>
-                  {agents.map((a) => (
-                    <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
-                  ))}
-                </select>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,65%)_minmax(0,35%)] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight text-text-primary">{ticket.ticketNumber}</h1>
+                <StatusBadge status={ticket.status} />
+                <PriorityBadge priority={ticket.priority} />
               </div>
-            )}
-            <div>
-              <span className="text-sm font-medium">Asset collegato:</span>
-              <select
-                value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
-                className={`${ui.select} mt-1`}
-              >
-                <option value="">Nessun asset</option>
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name} {a.assetTag ? `(${a.assetTag})` : ''}</option>
-                ))}
-              </select>
+              <h2 className="text-lg font-medium text-text-primary">{ticket.title}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">{ticket.description}</p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-text-secondary">
+                <span>
+                  Categoria: <strong className="text-text-primary">{ticket.category?.name}</strong>
+                </span>
+                <span>
+                  Richiedente:{' '}
+                  <strong className="text-text-primary">
+                    {ticket.requester?.firstName} {ticket.requester?.lastName}
+                  </strong>
+                </span>
+                <span>
+                  Assegnato a:{' '}
+                  <strong className="text-text-primary">
+                    {ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : '—'}
+                  </strong>
+                </span>
+                <span>
+                  Creato:{' '}
+                  <strong className="text-text-primary">{format(new Date(ticket.createdAt), 'dd MMM yyyy HH:mm', { locale: it })}</strong>
+                </span>
+                <span>
+                  Asset: <strong className="text-text-primary">{ticket.assets?.[0]?.asset?.name || '—'}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start">
+              {isAgent && (
+                <div className="flex flex-wrap gap-2">
+                  {availableTransitions.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setStatusModal(t)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-ds px-3 py-2 text-sm font-medium text-white transition-colors duration-150',
+                        t.color
+                      )}
+                    >
+                      <t.icon size={16} /> {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="inline-flex items-center gap-2 rounded-ds border border-semantic-danger/30 bg-semantic-danger/10 px-4 py-2 text-sm font-medium text-semantic-danger transition-colors hover:bg-semantic-danger/20"
+                >
+                  <Trash2 size={16} /> Elimina ticket
+                </button>
+              )}
             </div>
           </div>
-          {isAdmin && (
-            <button
-              onClick={assign}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Salva assegnazione
-            </button>
+
+          {isAgent && (
+            <div className={`${ui.cardSection} flex flex-col items-start gap-3`}>
+              <UserCheck size={18} className="shrink-0 text-accent" />
+              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                {isAdmin && (
+                  <div>
+                    <span className="text-sm font-medium text-text-primary">Assegna a:</span>
+                    <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className={`${ui.select} mt-1`}>
+                      <option value="">Non assegnato</option>
+                      {agents.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.firstName} {a.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm font-medium text-text-primary">Asset collegato:</span>
+                  <select value={assetId} onChange={(e) => setAssetId(e.target.value)} className={`${ui.select} mt-1`}>
+                    <option value="">Nessun asset</option>
+                    {assets.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} {a.assetTag ? `(${a.assetTag})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {isAdmin && (
+                <Button type="button" onClick={assign}>
+                  Salva assegnazione
+                </Button>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Comments */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className={ui.cardSection}>
-            <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
-              <MessageSquare size={16} className="text-primary-400" /> Commenti
-            </h3>
-            <CommentThread messages={messages} currentUserId={user?.id} currentUserRole={user?.role} />
-
-            <div className="mt-4 pt-4 border-t border-slate-700/50">
+          <div className="flex min-h-[420px] flex-col overflow-hidden rounded-ds border border-border-subtle bg-surface-card shadow-card">
+            <div className="border-b border-border-subtle px-5 py-4">
+              <h3 className="flex items-center gap-2 text-[15px] font-semibold text-text-primary">
+                <MessageSquare size={16} className="text-accent" aria-hidden /> Commenti
+              </h3>
+            </div>
+            <div className="max-h-[min(420px,50vh)] flex-1 overflow-y-auto px-5 py-4">
+              <CommentThread messages={messages} currentUserId={user?.id} currentUserRole={user?.role} />
+            </div>
+            <div className="sticky bottom-0 z-10 border-t border-border-subtle bg-surface-main/90 px-5 py-4 backdrop-blur-sm">
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -256,41 +279,42 @@ export default function TicketDetail() {
                 rows={3}
                 className={`${ui.textarea} resize-none`}
               />
-              <div className="flex items-center justify-between mt-2">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 {isAgent && (
-                  <label className="inline-flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+                  <label className="inline-flex cursor-pointer select-none items-center gap-2 text-sm text-text-secondary">
                     <input
                       type="checkbox"
                       checked={isInternal}
                       onChange={(e) => setIsInternal(e.target.checked)}
-                      className="rounded border-slate-600 bg-slate-900 text-primary-500"
+                      className="rounded border-border-subtle bg-surface-card text-accent focus:ring-accent/30"
                     />
                     <EyeOff size={14} /> Commento interno
                   </label>
                 )}
-                <button
-                  onClick={sendComment}
-                  disabled={sending || !content.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors ml-auto"
-                >
-                  {sending ? 'Invio...' : <><Send size={14} /> Invia</>}
-                </button>
+                <Button type="button" className="ml-auto" disabled={sending || !content.trim()} onClick={sendComment}>
+                  {sending ? (
+                    'Invio…'
+                  ) : (
+                    <>
+                      <Send size={14} /> Invia
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Timeline + Attachments */}
-        <div className="space-y-4">
+        <aside className="min-w-0 space-y-6">
           <div className={ui.cardSection}>
-            <h3 className="font-semibold text-sm mb-4">Cronologia</h3>
+            <h3 className="mb-4 text-[15px] font-semibold text-text-primary">Cronologia</h3>
             <TicketTimeline logs={ticket.auditLogs} />
           </div>
 
           {ticket.attachments?.length > 0 && (
             <div className={ui.cardSection}>
-              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                <Paperclip size={16} className="text-primary-400" /> Allegati
+              <h3 className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-text-primary">
+                <Paperclip size={16} className="text-accent" aria-hidden /> Allegati
               </h3>
               <div className="space-y-2">
                 {ticket.attachments.map((att) => (
@@ -299,7 +323,7 @@ export default function TicketDetail() {
                     href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/uploads/${att.filename}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                    className="flex items-center gap-2 text-sm text-accent transition-colors hover:text-accent-hover"
                   >
                     <Paperclip size={14} /> {att.originalName}
                   </a>
@@ -307,12 +331,12 @@ export default function TicketDetail() {
               </div>
             </div>
           )}
-        </div>
+        </aside>
       </div>
 
       <ConfirmModal
         open={!!statusModal}
-        title={`Conferma cambio stato`}
+        title="Conferma cambio stato"
         message={`Vuoi cambiare lo stato del ticket in "${statusModal?.label}"?`}
         onConfirm={() => changeStatus(statusModal?.value)}
         onCancel={() => setStatusModal(null)}
@@ -328,7 +352,7 @@ export default function TicketDetail() {
             toast.success('Ticket eliminato definitivamente')
             navigate('/tickets')
           } catch (e) {
-            toast.error(e.response?.data?.error || 'Errore nell\'eliminazione ticket')
+            toast.error(e.response?.data?.error || "Errore nell'eliminazione ticket")
           } finally {
             setConfirmDelete(false)
           }
@@ -341,4 +365,3 @@ export default function TicketDetail() {
     </div>
   )
 }
-

@@ -2,10 +2,30 @@ import React, { useEffect, useState } from 'react'
 import api from '../api/axios'
 import DataTable from '../components/DataTable'
 import ConfirmModal from '../components/ConfirmModal'
+import AdminTabs from '../components/AdminTabs'
+import Button from '../components/ui/Button'
 import { toast } from 'sonner'
 import { UserPlus, ToggleLeft, ToggleRight, Trash2, KeyRound } from 'lucide-react'
+import { ui, cn } from '../lib/utils'
 
 const ROLE_OPTIONS = ['user', 'technician', 'admin']
+
+function initials(u) {
+  const a = u.firstName?.[0] || ''
+  const b = u.lastName?.[0] || ''
+  return `${a}${b}`.toUpperCase() || '?'
+}
+
+function roleBadgeClass(role) {
+  switch (role) {
+    case 'admin':
+      return 'border-accent/30 bg-accent/15 text-accent'
+    case 'technician':
+      return 'border-semantic-warning/30 bg-semantic-warning/15 text-semantic-warning'
+    default:
+      return 'border-border-subtle bg-surface-hover text-text-secondary'
+  }
+}
 
 export default function Users() {
   const [users, setUsers] = useState([])
@@ -36,10 +56,10 @@ export default function Users() {
     fetchUsers()
   }, [page, search])
 
-  const toggleActive = async (user) => {
+  const toggleActive = async (userRow) => {
     try {
-      await api.patch(`/users/${user.id}`, { isActive: !user.isActive })
-      toast.success(`Utente ${user.isActive ? 'disattivato' : 'attivato'}`)
+      await api.patch(`/users/${userRow.id}`, { isActive: !userRow.isActive })
+      toast.success(`Utente ${userRow.isActive ? 'disattivato' : 'attivato'}`)
       fetchUsers()
     } catch (e) {
       toast.error('Errore')
@@ -89,28 +109,50 @@ export default function Users() {
   }
 
   const columns = [
-    { key: 'name', label: 'Nome', render: (u) => `${u.firstName} ${u.lastName}` },
-    { key: 'email', label: 'Email' },
+    {
+      key: 'name',
+      label: 'Nome',
+      render: (u) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-hover text-xs font-semibold text-text-primary ring-1 ring-border-subtle">
+            {initials(u)}
+          </div>
+          <span className="font-medium text-text-primary">
+            {u.firstName} {u.lastName}
+          </span>
+        </div>
+      ),
+    },
+    { key: 'email', label: 'Email', render: (u) => <span className="text-text-secondary">{u.email}</span> },
     {
       key: 'role',
       label: 'Ruolo',
       render: (u) => (
-        <select
-          value={u.role}
-          onChange={(e) => changeRole(u.id, e.target.value)}
-          className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-        >
-          {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide', roleBadgeClass(u.role))}>
+            {u.role}
+          </span>
+          <select
+            value={u.role}
+            onChange={(e) => changeRole(u.id, e.target.value)}
+            className={`${ui.select} max-w-[140px] py-1.5 text-xs`}
+          >
+            {ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
       ),
     },
     {
       key: 'active',
       label: 'Stato',
       render: (u) => (
-        <button onClick={() => toggleActive(u)} className="inline-flex items-center gap-1 text-sm">
-          {u.isActive ? <ToggleRight size={20} className="text-green-400" /> : <ToggleLeft size={20} className="text-slate-500" />}
-          <span className={u.isActive ? 'text-green-400' : 'text-slate-500'}>{u.isActive ? 'Attivo' : 'Disattivato'}</span>
+        <button type="button" onClick={() => toggleActive(u)} className="inline-flex items-center gap-1 text-sm">
+          {u.isActive ? <ToggleRight size={20} className="text-semantic-success" /> : <ToggleLeft size={20} className="text-text-disabled" />}
+          <span className={u.isActive ? 'text-semantic-success' : 'text-text-secondary'}>{u.isActive ? 'Attivo' : 'Disattivato'}</span>
         </button>
       ),
     },
@@ -118,11 +160,21 @@ export default function Users() {
       key: 'actions',
       label: '',
       render: (u) => (
-        <div className="flex items-center gap-2">
-          <button onClick={() => resetPassword(u.id)} title="Reset password" className="p-1.5 rounded hover:bg-slate-700 text-primary-400 transition-colors">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => resetPassword(u.id)}
+            title="Reset password"
+            className="rounded-ds p-1.5 text-accent transition-colors hover:bg-accent/10"
+          >
             <KeyRound size={16} />
           </button>
-          <button onClick={() => setModal({ type: 'delete', user: u })} title="Elimina" className="p-1.5 rounded hover:bg-rose-500/10 text-rose-400 transition-colors">
+          <button
+            type="button"
+            onClick={() => setModal({ type: 'delete', user: u })}
+            title="Elimina"
+            className="rounded-ds p-1.5 text-semantic-danger transition-colors hover:bg-semantic-danger/10"
+          >
             <Trash2 size={16} />
           </button>
         </div>
@@ -131,51 +183,71 @@ export default function Users() {
   ]
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-6">
+      <AdminTabs className="mb-2" />
+
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold">Gestione Utenti</h1>
-          <p className="text-slate-400 text-sm">Crea, modifica e gestisci gli utenti</p>
+          <h1 className="text-[20px] font-semibold tracking-tight text-text-primary">Gestione Utenti</h1>
+          <p className={ui.subtleText}>Crea, modifica e gestisci gli utenti</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
+        <Button type="button" onClick={() => setShowCreate(true)}>
           <UserPlus size={18} /> Nuovo Utente
-        </button>
+        </Button>
       </div>
 
       <input
         type="text"
         value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+        onChange={(e) => {
+          setSearch(e.target.value)
+          setPage(1)
+        }}
         placeholder="Cerca per nome, email, dipartimento..."
-        className="w-full max-w-md px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm"
+        className={`${ui.input} max-w-md`}
       />
 
-      <DataTable
-        columns={columns}
-        data={users}
-        pagination={pagination}
-        onPageChange={setPage}
-        loading={loading}
-      />
+      <DataTable columns={columns} data={users} pagination={pagination} onPageChange={setPage} loading={loading} />
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-lg font-semibold">Nuovo Utente</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-[4px]">
+          <div className={`${ui.cardSection} w-full max-w-md space-y-4 shadow-elevated`}>
+            <h3 className="text-lg font-semibold text-text-primary">Nuovo Utente</h3>
             <div className="grid gap-3">
-              <input placeholder="Nome" value={newUser.firstName} onChange={(e) => setNewUser((p) => ({ ...p, firstName: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
-              <input placeholder="Cognome" value={newUser.lastName} onChange={(e) => setNewUser((p) => ({ ...p, lastName: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
-              <input placeholder="Email" type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
-              <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm">
-                {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              <input
+                placeholder="Nome"
+                value={newUser.firstName}
+                onChange={(e) => setNewUser((p) => ({ ...p, firstName: e.target.value }))}
+                className={ui.input}
+              />
+              <input
+                placeholder="Cognome"
+                value={newUser.lastName}
+                onChange={(e) => setNewUser((p) => ({ ...p, lastName: e.target.value }))}
+                className={ui.input}
+              />
+              <input
+                placeholder="Email"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))}
+                className={ui.input}
+              />
+              <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className={ui.select}>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg text-sm bg-slate-700 hover:bg-slate-600">Annulla</button>
-              <button onClick={createUser} className="px-4 py-2 rounded-lg text-sm bg-primary-500 hover:bg-primary-600 text-white">Crea</button>
+              <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>
+                Annulla
+              </Button>
+              <Button type="button" onClick={createUser}>
+                Crea
+              </Button>
             </div>
           </div>
         </div>
@@ -192,4 +264,3 @@ export default function Users() {
     </div>
   )
 }
-

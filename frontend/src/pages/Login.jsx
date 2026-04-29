@@ -49,14 +49,14 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-surface-main px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl">
+        <div className="rounded-ds-lg border border-border-subtle bg-surface-card p-8 shadow-elevated">
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 bg-primary-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary-500/20">
               <Ticket size={32} className="text-white" />

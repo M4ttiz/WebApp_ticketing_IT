@@ -7,6 +7,7 @@ import api from '../api/axios'
 import AssetModal from '../components/AssetModal'
 import ConfirmModal from '../components/ConfirmModal'
 import { useAuth } from '../context/AuthContext'
+import { normalizeRole } from '../lib/roles'
 import { ui } from '../lib/utils'
 
 const CATEGORY_COLORS = {
@@ -44,7 +45,9 @@ export default function Inventory() {
   const [editingAsset, setEditingAsset] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const isAdmin = user?.role === 'admin'
+  const nr = normalizeRole(user?.role)
+  const isAdmin = nr === 'admin'
+  const canManageAssets = isAdmin || nr === 'agent'
 
   useEffect(() => {
     api.get('/settings/asset-categories')
@@ -204,7 +207,7 @@ export default function Inventory() {
           <p className={ui.subtleText}>Nuova struttura inventario con sezioni, filtri, export e KPI prodotto</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(isAdmin || user?.role === 'technician') && (
+          {canManageAssets && (
             <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-white transition-colors">
               <Plus size={16} /> Aggiungi riga
             </button>
@@ -265,9 +268,9 @@ export default function Inventory() {
                       {list.map((asset) => (
                         <tr
                           key={asset.id}
-                          className={`border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors ${((isAdmin || user?.role === 'technician') && asset) ? 'cursor-pointer' : ''}`}
+                          className={`border-b border-border-subtle/80 hover:bg-surface-hover/80 transition-colors ${canManageAssets && asset ? 'cursor-pointer' : ''}`}
                           onClick={() => {
-                            if (isAdmin || user?.role === 'technician') openEdit(asset)
+                            if (canManageAssets) openEdit(asset)
                           }}
                         >
                           <td className="bg-blue-600/80" />
@@ -286,7 +289,7 @@ export default function Inventory() {
                                   e.stopPropagation()
                                 }}
                               >
-                                {(isAdmin || user?.role === 'technician') && (
+                                {canManageAssets && (
                                   <button
                                     onClick={() => openEdit(asset)}
                                     className="text-xs px-2 py-1 rounded-lg border border-slate-700/60 hover:bg-slate-700/40 text-slate-200"
