@@ -185,7 +185,7 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Assegnato a</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Reparto</label>
                     <input value={form.assignedTo} onChange={e => update('assignedTo', e.target.value)} className={ui.input} placeholder="Nome cognome" />
                   </div>
 

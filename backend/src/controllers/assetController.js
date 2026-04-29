@@ -378,37 +378,6 @@ async function unlinkTicket(req, res, next) {
   }
 }
 
-/**
- * DELETE /api/assets/reset
- * Reset completo inventario dati/configurazioni
- */
-async function resetInventory(req, res, next) {
-  try {
-    await prisma.$transaction([
-      prisma.ticketAsset.deleteMany({}),
-      prisma.asset.deleteMany({}),
-      prisma.setting.deleteMany({
-        where: {
-          OR: [
-            { key: { startsWith: 'inventory.' } },
-            { key: { startsWith: 'inventory_' } },
-            { key: { startsWith: 'warehouse.' } },
-            { key: { startsWith: 'warehouse_' } },
-            { key: { startsWith: 'tracking.' } },
-            { key: { startsWith: 'tracking_' } },
-          ],
-        },
-      }),
-    ]);
-
-    res.json({
-      message: 'Inventario azzerato con successo',
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
 module.exports = {
   listAssets,
   getAsset,
@@ -418,5 +387,4 @@ module.exports = {
   linkTicket,
   unlinkTicket,
   topOpenTicketsByProduct,
-  resetInventory,
 };

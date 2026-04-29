@@ -31,7 +31,3 @@ export const unlinkTicket = (assetId, ticketId) => {
 export const getTopOpenTicketsByProduct = (params = {}) => {
   return api.get('/assets/analytics/top-open-tickets', { params })
 }
-
-export const resetInventory = () => {
-  return api.delete('/assets/reset')
-}

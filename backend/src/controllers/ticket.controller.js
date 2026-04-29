@@ -728,6 +728,30 @@ async function getHistory(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/tickets/:id
+ * Hard delete (ticket + relativi record in DB con cascade).
+ */
+async function deleteTicket(req, res, next) {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { role } = req.user;
+
+    // La route è protetta da requireRole(['admin']), ma aggiungiamo una guardia server-side.
+    if (role !== 'admin') {
+      throw new ForbiddenError();
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) throw new NotFoundError('Ticket');
+
+    await prisma.ticket.delete({ where: { id: ticketId } });
+    res.json({ message: 'Ticket eliminato definitivamente' });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   listTickets,
   createTicket,
@@ -740,5 +764,6 @@ module.exports = {
   getMessages,
   addMessage,
   getHistory,
+  deleteTicket,
 };
 

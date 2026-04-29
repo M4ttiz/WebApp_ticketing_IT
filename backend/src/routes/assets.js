@@ -84,13 +84,6 @@ router.put(
   assetController.updateAsset
 );
 
-// DELETE /api/assets/reset — Full reset inventory data/config
-router.delete(
-  '/reset',
-  requireRole(['admin']),
-  assetController.resetInventory
-);
-
 // DELETE /api/assets/:id — Delete asset (admin only)
 router.delete(
   '/:id',

@@ -67,6 +67,15 @@ router.get(
   ticketController.getTicket
 );
 
+// DELETE /api/tickets/:id — Hard delete (admin)
+router.delete(
+  '/:id',
+  requireRole(['admin']),
+  [param('id').isInt().withMessage('ID ticket non valido')],
+  validate,
+  ticketController.deleteTicket
+);
+
 // PATCH /api/tickets/:id — Update ticket (priority, category)
 router.patch(
   '/:id',

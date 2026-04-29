@@ -24,6 +24,7 @@ import {
   XCircle,
   Clock,
   Lock,
+  Trash2,
 } from 'lucide-react'
 
 const STATUS_FLOW = {
@@ -60,6 +61,7 @@ export default function TicketDetail() {
   const [assigneeId, setAssigneeId] = useState('')
   const [assets, setAssets] = useState([])
   const [assetId, setAssetId] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const isAdmin = user?.role === 'admin'
   const isAgent = user?.role === 'admin' || user?.role === 'technician'
@@ -180,6 +182,15 @@ export default function TicketDetail() {
               </button>
             ))}
           </div>
+        )}
+
+        {isAdmin && (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 transition-colors"
+          >
+            <Trash2 size={16} /> Elimina ticket
+          </button>
         )}
       </div>
 
@@ -306,6 +317,26 @@ export default function TicketDetail() {
         onConfirm={() => changeStatus(statusModal?.value)}
         onCancel={() => setStatusModal(null)}
         danger={statusModal?.value === 'RIFIUTATO'}
+      />
+
+      <ConfirmModal
+        open={confirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={async () => {
+          try {
+            await api.delete(`/tickets/${id}`)
+            toast.success('Ticket eliminato definitivamente')
+            navigate('/tickets')
+          } catch (e) {
+            toast.error(e.response?.data?.error || 'Errore nell\'eliminazione ticket')
+          } finally {
+            setConfirmDelete(false)
+          }
+        }}
+        title="Elimina ticket definitivamente"
+        message="Questa azione cancella il ticket anche dal DB. Continuare?"
+        confirmText="Conferma eliminazione"
+        danger
       />
     </div>
   )

@@ -52,10 +52,14 @@ export default function AssetCategoriesAdmin() {
     setNewCategory('')
   }
 
-  const removeCustomCategory = (category) => {
-    setCustom((prev) => prev.filter((c) => c !== category))
-    setAvailable((prev) => prev.filter((c) => c !== category))
+  // Rimuovi dalla selezione attiva (e se è una categoria custom la rimuove anche dalla lista custom).
+  const removeCategory = (category) => {
     setSelected((prev) => prev.filter((c) => c !== category))
+
+    if (custom.includes(category)) {
+      setCustom((prev) => prev.filter((c) => c !== category))
+      setAvailable((prev) => prev.filter((c) => c !== category))
+    }
   }
 
   const save = async () => {
@@ -100,8 +104,11 @@ export default function AssetCategoriesAdmin() {
                 />
                 <span>{category}</span>
               </label>
-              {custom.includes(category) && (
-                <button onClick={() => removeCustomCategory(category)} className="text-xs text-rose-400 hover:text-rose-300">
+              {selected.includes(category) && (
+                <button
+                  onClick={() => removeCategory(category)}
+                  className="text-xs text-rose-400 hover:text-rose-300"
+                >
                   Rimuovi
                 </button>
               )}
