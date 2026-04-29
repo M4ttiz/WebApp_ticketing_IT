@@ -17,17 +17,29 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const normalizedRole = String(user?.role || '').toLowerCase()
 
+  const now = new Date()
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [useMonthYear, setUseMonthYear] = useState(false)
+  const [month, setMonth] = useState(String(now.getMonth() + 1))
+  const [year, setYear] = useState(String(now.getFullYear()))
+
   useEffect(() => {
     if (normalizedRole === 'user') {
       setLoading(false)
       return
     }
 
-    api.get('/dashboard')
+    setLoading(true)
+    const params = {
+      status: statusFilter,
+      ...(useMonthYear ? { month, year } : {}),
+    }
+
+    api.get('/dashboard', { params })
       .then((r) => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [normalizedRole])
+  }, [normalizedRole, statusFilter, useMonthYear, month, year])
 
   if (normalizedRole === 'user') {
     return <Navigate to="/tickets" replace />
@@ -43,6 +55,53 @@ export default function Dashboard() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className={ui.subtleText}>Panoramica ticket e performance operative</p>
+      </div>
+
+      {/* Filtri dashboard */}
+      <div className={`${ui.cardSection} p-4 flex flex-col sm:flex-row sm:items-center gap-3`}>
+        <div className="min-w-[180px]">
+          <label className="block text-xs text-slate-400 mb-1">Stato</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={ui.select}>
+            <option value="ALL">Tutti</option>
+            <option value="OPEN">Aperti</option>
+            <option value="CLOSED">Chiusi</option>
+          </select>
+        </div>
+
+        <div className="flex items-end gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={useMonthYear}
+              onChange={(e) => setUseMonthYear(e.target.checked)}
+              className="rounded border-slate-600 bg-slate-900 text-primary-500"
+            />
+            Filtra mese/anno
+          </label>
+        </div>
+
+        {useMonthYear && (
+          <>
+            <div className="min-w-[140px]">
+              <label className="block text-xs text-slate-400 mb-1">Mese</label>
+              <select value={month} onChange={(e) => setMonth(e.target.value)} className={ui.select}>
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const v = String(i + 1)
+                  return <option key={v} value={v}>{v}</option>
+                })}
+              </select>
+            </div>
+            <div className="min-w-[160px]">
+              <label className="block text-xs text-slate-400 mb-1">Anno</label>
+              <select value={year} onChange={(e) => setYear(e.target.value)} className={ui.select}>
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const v = String(new Date().getFullYear() - i)
+                  return <option key={v} value={v}>{v}</option>
+                })}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
       {/* KPI Cards */}
