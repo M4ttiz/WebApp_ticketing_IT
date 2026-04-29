@@ -7,8 +7,8 @@ export default function ProtectedRoute({ roles }) {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-100">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
+      <div className="flex min-h-screen items-center justify-center bg-surface-main text-text-primary">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-border-subtle border-t-accent" />
       </div>
     )
   }

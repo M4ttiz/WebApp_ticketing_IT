@@ -17,47 +17,49 @@ export default function DataTable({
   return (
     <div className={cn(ui.card, 'overflow-hidden')}>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-700/40 text-slate-300 uppercase text-xs">
+        <table className="w-full text-left text-sm text-text-primary">
+          <thead className="border-b border-border-subtle bg-surface-card">
             <tr>
-              {columns.map((col) => (
+              {columns.map((col, idx) => (
                 <th
                   key={col.key}
-                  className={cn('px-4 py-3 font-semibold', col.className)}
+                  className={cn(
+                    'px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-text-secondary',
+                    idx === 0 && 'font-bold text-text-primary',
+                    col.className
+                  )}
                   onClick={() => col.sortable && onSort && onSort(col.key)}
                 >
-                  <div className={cn('flex items-center gap-1', col.sortable && 'cursor-pointer hover:text-white select-none')}>
+                  <div className={cn('flex items-center gap-1', col.sortable && 'cursor-pointer select-none hover:text-text-primary')}>
                     {col.label}
-                    {col.sortable && sortBy === col.key && (
-                      sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    )}
+                    {col.sortable && sortBy === col.key && (sortOrder === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-700/50">
+          <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
+                <tr key={i} className="border-b border-border-subtle/80">
                   {columns.map((_, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 w-full animate-pulse rounded bg-slate-700/80" />
+                      <div className="h-4 w-full animate-pulse rounded bg-surface-hover" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-slate-400">
+                <td colSpan={columns.length} className="px-4 py-10 text-center text-text-secondary">
                   Nessun dato trovato
                 </td>
               </tr>
             ) : (
               data.map((row, i) => (
-                <tr key={row.id || i} className="hover:bg-slate-700/30 transition-colors">
-                  {columns.map((col) => (
-                    <td key={col.key} className={cn('px-4 py-3', col.className)}>
+                <tr key={row.id || i} className="border-b border-border-subtle/80 transition-colors duration-150 hover:bg-surface-hover/80">
+                  {columns.map((col, idx) => (
+                    <td key={col.key} className={cn('px-4 py-3 text-text-primary', idx === 0 && 'font-semibold', col.className)}>
                       {col.render ? col.render(row) : row[col.key]}
                     </td>
                   ))}
@@ -69,8 +71,8 @@ export default function DataTable({
       </div>
 
       {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/50">
-          <div className="text-xs text-slate-400">
+        <div className="flex items-center justify-between border-t border-border-subtle px-4 py-3">
+          <div className="text-xs text-text-secondary">
             Pagina {page} di {totalPages} — {total} totali
           </div>
           <div className="flex items-center gap-1">
@@ -88,12 +90,12 @@ export default function DataTable({
 function PageBtn({ onClick, disabled, icon: Icon }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      className="p-1.5 rounded-md hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+      className="rounded-ds p-1.5 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-30 disabled:hover:bg-transparent"
     >
       <Icon size={16} />
     </button>
   )
 }
-
