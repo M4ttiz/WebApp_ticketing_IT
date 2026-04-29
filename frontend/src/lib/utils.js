@@ -7,14 +7,16 @@ export function cn(...inputs) {
 
 export const ui = {
   page: 'space-y-6',
-  card: 'rounded-xl border border-slate-700 bg-slate-800',
-  cardSection: 'rounded-xl border border-slate-700 bg-slate-800 p-5',
-  subtleText: 'text-sm text-slate-400',
+  card:
+    'rounded-ds border border-border-subtle bg-surface-card shadow-card transition-colors duration-150 hover:border-border-muted',
+  cardSection:
+    'rounded-ds border border-border-subtle bg-surface-card p-5 shadow-card transition-colors duration-150 hover:border-border-muted',
+  subtleText: 'text-sm text-text-secondary',
   input:
-    'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20',
+    'w-full rounded-ds border border-border-subtle bg-surface-card px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent/20 shadow-none transition-colors duration-150',
   select:
-    'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20',
+    'w-full rounded-ds border border-border-subtle bg-surface-card px-3.5 py-2.5 text-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors duration-150',
   textarea:
-    'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20',
+    'w-full rounded-ds border border-border-subtle bg-surface-card px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent/20 transition-colors duration-150',
+  label: 'block text-[11px] font-medium uppercase tracking-wide text-text-secondary mb-1.5',
 }
-

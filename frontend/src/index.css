@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg-dark: #0f172a;
-  --panel: #1e293b;
-  --muted: #94a3b8;
+  --surface-main: #0f1117;
+  --surface-card: #16181e;
+  --border-subtle: #2a2d35;
 }
 
 body {
-  @apply bg-slate-900 text-slate-100;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  @apply bg-surface-main text-text-primary antialiased;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* Custom scrollbar */
@@ -19,35 +19,47 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: var(--surface-card);
 }
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #3a3d45;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #4a4e62;
 }
 
-/* Glassmorphism helper */
+/* Glass helper */
 .glass {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(22, 24, 30, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Form focus ring */
-input, textarea, select {
-  @apply outline-none focus:ring-2 focus:ring-primary-500/50 transition-shadow;
+/* Form focus — design system ring */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  @apply outline-none transition-shadow duration-150;
 }
 
 /* Button micro-interactions */
-button:not(:disabled) {
-  @apply transition-transform duration-150 active:scale-95;
+button:not(:disabled):not([aria-disabled="true"]) {
+  @apply transition-colors duration-150 active:scale-[0.98];
 }
 
-/* Skeleton shimmer */
+/* Skeleton */
 .skeleton {
-  @apply bg-slate-700 rounded animate-pulse-skeleton;
+  @apply rounded-ds bg-surface-hover animate-pulse-skeleton;
 }
 
+/* Toast progress bar (sonner) */
+[data-sonner-toast][data-type="success"] {
+  border-left: 3px solid theme('colors.semantic.success');
+}
+[data-sonner-toast][data-type="error"] {
+  border-left: 3px solid theme('colors.semantic.danger');
+}
+[data-sonner-toast][data-type="warning"] {
+  border-left: 3px solid theme('colors.semantic.warning');
+}
