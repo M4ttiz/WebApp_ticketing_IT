@@ -3,7 +3,7 @@ import api from '../api/axios'
 import DataTable from '../components/DataTable'
 import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
-import { FolderPlus, ToggleLeft, ToggleRight, Pencil, Trash2 } from 'lucide-react'
+import { ToggleLeft, ToggleRight, Pencil, Trash2 } from 'lucide-react'
 
 export default function Categories() {
   const [categories, setCategories] = useState([])
@@ -109,12 +109,6 @@ export default function Categories() {
           <h1 className="text-2xl font-bold">Categorie</h1>
           <p className="text-slate-400 text-sm">Gestisci le categorie dei ticket</p>
         </div>
-        <button
-          onClick={() => { setEditing(null); setForm({ name: '', description: '' }) }}
-          className="inline-flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          <FolderPlus size={18} /> Nuova Categoria
-        </button>
       </div>
 
       {/* Create/Edit form */}

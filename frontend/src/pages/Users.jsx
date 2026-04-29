@@ -5,7 +5,7 @@ import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
 import { UserPlus, ToggleLeft, ToggleRight, Trash2, KeyRound } from 'lucide-react'
 
-const ROLE_OPTIONS = ['user', 'technician', 'admin']
+const ROLE_OPTIONS = ['user', 'viewer', 'technician', 'admin']
 
 export default function Users() {
   const [users, setUsers] = useState([])
@@ -69,17 +69,27 @@ export default function Users() {
 
   const resetPassword = async (id) => {
     try {
-      await api.post(`/users/${id}/reset-password`)
-      toast.success('Password reimpostata e inviata via email')
+      const res = await api.post(`/users/${id}/reset-password`)
+      const tempPassword = res.data?.tempPassword
+      if (tempPassword) {
+        toast.success(`Password temporanea: ${tempPassword}`)
+      } else {
+        toast.success('Password reimpostata')
+      }
     } catch (e) {
-      toast.error('Errore')
+      toast.error(e.response?.data?.error || 'Errore')
     }
   }
 
   const createUser = async () => {
     try {
-      await api.post('/users', newUser)
-      toast.success('Utente creato')
+      const res = await api.post('/users', newUser)
+      const tempPassword = res.data?.tempPassword
+      if (tempPassword) {
+        toast.success(`Utente creato. Password temporanea: ${tempPassword}`)
+      } else {
+        toast.success('Utente creato')
+      }
       setShowCreate(false)
       setNewUser({ firstName: '', lastName: '', email: '', role: 'user' })
       fetchUsers()
@@ -168,7 +178,7 @@ export default function Users() {
             <div className="grid gap-3">
               <input placeholder="Nome" value={newUser.firstName} onChange={(e) => setNewUser((p) => ({ ...p, firstName: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
               <input placeholder="Cognome" value={newUser.lastName} onChange={(e) => setNewUser((p) => ({ ...p, lastName: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
-              <input placeholder="Email" type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
+              <input placeholder="Email (opzionale per account locale)" type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
               <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm">
                 {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>

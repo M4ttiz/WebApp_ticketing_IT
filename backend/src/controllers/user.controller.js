@@ -81,9 +81,11 @@ async function listUsers(req, res, next) {
 async function createUser(req, res, next) {
   try {
     const { firstName, lastName, email, role = 'user', department } = req.body;
+    const normalizedEmail = email?.toLowerCase().trim();
+    const resolvedEmail = normalizedEmail || `local.${crypto.randomUUID()}@local.user`;
 
     // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const existing = await prisma.user.findUnique({ where: { email: resolvedEmail } });
     if (existing) {
       throw new AppError('Questa email è già registrata', 409);
     }
@@ -96,7 +98,7 @@ async function createUser(req, res, next) {
       data: {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email: email.toLowerCase().trim(),
+        email: resolvedEmail,
         passwordHash,
         role,
         department: department?.trim() || null,
@@ -105,22 +107,24 @@ async function createUser(req, res, next) {
       select: userSelect,
     });
 
-    // Send welcome email with temp password
-    try {
-      sendEmail({
-        to: user.email,
-        subject: '👋 Benvenuto in IT Ticketing — Il tuo account',
-        html: emailTemplates.accountCreated(
-          { firstName: user.firstName, email: user.email, role: user.role },
-          tempPassword,
-          process.env.APP_URL
-        ),
-      });
-    } catch (e) {
-      console.error('Failed to send welcome email:', e.message);
+    // Send welcome email only for real email accounts (not local placeholder accounts).
+    if (normalizedEmail) {
+      try {
+        sendEmail({
+          to: user.email,
+          subject: '👋 Benvenuto in IT Ticketing — Il tuo account',
+          html: emailTemplates.accountCreated(
+            { firstName: user.firstName, email: user.email, role: user.role },
+            tempPassword,
+            process.env.APP_URL
+          ),
+        });
+      } catch (e) {
+        console.error('Failed to send welcome email:', e.message);
+      }
     }
 
-    res.status(201).json({ user });
+    res.status(201).json({ user, tempPassword, localAccount: !normalizedEmail });
   } catch (error) {
     next(error);
   }
@@ -262,22 +266,25 @@ async function adminResetPassword(req, res, next) {
     // Invalidate refresh tokens
     await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
 
-    // Send email with new temp password
-    try {
-      sendEmail({
-        to: user.email,
-        subject: '🔑 Password reimpostata — IT Ticketing',
-        html: emailTemplates.adminPasswordReset(
-          `${user.firstName} ${user.lastName}`,
-          tempPassword,
-          process.env.APP_URL
-        ),
-      });
-    } catch (e) {
-      console.error('Failed to send password reset email:', e.message);
+    // Send email only for real email accounts (skip local placeholders).
+    const isLocalEmail = user.email?.endsWith('@local.user');
+    if (!isLocalEmail) {
+      try {
+        sendEmail({
+          to: user.email,
+          subject: '🔑 Password reimpostata — IT Ticketing',
+          html: emailTemplates.adminPasswordReset(
+            `${user.firstName} ${user.lastName}`,
+            tempPassword,
+            process.env.APP_URL
+          ),
+        });
+      } catch (e) {
+        console.error('Failed to send password reset email:', e.message);
+      }
     }
 
-    res.json({ message: 'Password reimpostata' });
+    res.json({ message: 'Password reimpostata', tempPassword, localAccount: isLocalEmail });
   } catch (error) {
     next(error);
   }

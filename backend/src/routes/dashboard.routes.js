@@ -9,7 +9,7 @@ const dashboardController = require('../controllers/dashboard.controller');
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireRole(['admin', 'technician']));
+router.use(requireRole(['admin', 'technician', 'viewer']));
 
 // GET /api/dashboard
 router.get('/', dashboardController.getDashboard);

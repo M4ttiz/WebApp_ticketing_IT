@@ -14,6 +14,7 @@ const router = Router();
 
 // All routes require authentication
 router.use(requireAuth);
+router.use(requireRole(['admin', 'technician', 'user']));
 
 // GET /api/tickets — List tickets
 router.get(

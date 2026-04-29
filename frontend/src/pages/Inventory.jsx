@@ -40,6 +40,9 @@ export default function Inventory() {
   const [locationFilter, setLocationFilter] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState('')
   const [kpiLimit, setKpiLimit] = useState(10)
+  const [kpiStatusFilter, setKpiStatusFilter] = useState('OPEN')
+  const [kpiMonth, setKpiMonth] = useState('')
+  const [kpiYear, setKpiYear] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
@@ -85,6 +88,9 @@ export default function Inventory() {
     try {
       const params = {
         limit: kpiLimit,
+        status: kpiStatusFilter,
+        ...(kpiMonth && { month: kpiMonth }),
+        ...(kpiYear && { year: kpiYear }),
         ...(search && { search }),
         ...(categoryFilter !== 'Tutte' && { category: categoryFilter }),
         ...(locationFilter && { location: locationFilter }),
@@ -102,7 +108,7 @@ export default function Inventory() {
   useEffect(() => {
     fetchAssets()
     fetchTopKpi()
-  }, [search, categoryFilter, locationFilter, departmentFilter, kpiLimit])
+  }, [search, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -110,7 +116,7 @@ export default function Inventory() {
       fetchTopKpi()
     }, 30000)
     return () => clearInterval(intervalId)
-  }, [search, categoryFilter, locationFilter, departmentFilter, kpiLimit])
+  }, [search, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
 
   const handleDelete = async (id) => {
     try {
@@ -318,20 +324,62 @@ export default function Inventory() {
         <div className={`${ui.cardSection} h-fit`}>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div>
-              <h3 className="text-sm font-semibold">KPI ticket aperti per prodotto (Top {kpiLimit})</h3>
+              <h3 className="text-sm font-semibold">KPI ticket per prodotto (Top {kpiLimit})</h3>
               <p className="text-xs text-slate-400 mt-1">Filtrato in base ai criteri attivi su ricerca/categoria/sede/reparto</p>
             </div>
-            <div className="min-w-[120px]">
-              <label className="block text-xs text-slate-400 mb-1">Top N</label>
-              <select
-                value={kpiLimit}
-                onChange={(e) => setKpiLimit(parseInt(e.target.value))}
-                className={ui.select}
-              >
-                {[5, 10, 20].map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-2 min-w-[280px]">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Top N</label>
+                <select
+                  value={kpiLimit}
+                  onChange={(e) => setKpiLimit(parseInt(e.target.value))}
+                  className={ui.select}
+                >
+                  {[5, 10, 20].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Stato ticket</label>
+                <select
+                  value={kpiStatusFilter}
+                  onChange={(e) => setKpiStatusFilter(e.target.value)}
+                  className={ui.select}
+                >
+                  <option value="OPEN">Aperti</option>
+                  <option value="CLOSED">Chiusi</option>
+                  <option value="ALL">Tutti</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Mese</label>
+                <select
+                  value={kpiMonth}
+                  onChange={(e) => setKpiMonth(e.target.value)}
+                  className={ui.select}
+                >
+                  <option value="">Tutti</option>
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const v = String(i + 1)
+                    return <option key={v} value={v}>{v}</option>
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Anno</label>
+                <select
+                  value={kpiYear}
+                  onChange={(e) => setKpiYear(e.target.value)}
+                  className={ui.select}
+                >
+                  <option value="">Tutti</option>
+                  {Array.from({ length: 6 }).map((_, i) => {
+                    const v = String(new Date().getFullYear() - i)
+                    return <option key={v} value={v}>{v}</option>
+                  })}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -356,7 +404,7 @@ export default function Inventory() {
                       contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                       labelStyle={{ color: '#f1f5f9' }}
                       itemStyle={{ color: '#f1f5f9' }}
-                      formatter={(val) => [`${val} ticket aperti`, '']}
+                      formatter={(val) => [`${val} ticket`, '']}
                     />
                     <Bar dataKey="openTickets" radius={[6, 6, 0, 0]}>
                       {kpiChartData.map((_, i) => (
@@ -373,7 +421,7 @@ export default function Inventory() {
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-500">#{index + 1}</span>
                       <span className="text-xs px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
-                        {item.openTickets} aperti
+                        {item.openTickets} ticket
                       </span>
                     </div>
                     <div className="mt-1 text-sm font-medium">{item.descrizione}</div>

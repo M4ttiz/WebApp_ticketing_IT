@@ -86,7 +86,7 @@ async function listAssets(req, res, next) {
  */
 async function topOpenTicketsByProduct(req, res, next) {
   try {
-    const { category, location, department, search } = req.query;
+    const { category, location, department, search, status = 'OPEN', month, year } = req.query;
     const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 10));
 
     const where = {};
@@ -120,12 +120,31 @@ async function topOpenTicketsByProduct(req, res, next) {
 
     const assetIds = assets.map((asset) => asset.id);
     const openStatuses = ['APERTO', 'IN_LAVORAZIONE', 'IN_ATTESA'];
+    const closedStatuses = ['RISOLTO', 'CHIUSO', 'RIFIUTATO'];
+    const selectedStatuses = status === 'CLOSED'
+      ? closedStatuses
+      : status === 'ALL'
+        ? [...openStatuses, ...closedStatuses]
+        : openStatuses;
+
+    let createdAt;
+    if (month || year) {
+      const now = new Date();
+      const y = Number(year || now.getFullYear());
+      const m = Number(month || 1);
+      const start = new Date(y, m - 1, 1, 0, 0, 0, 0);
+      const end = new Date(y, m, 1, 0, 0, 0, 0);
+      createdAt = { gte: start, lt: end };
+    }
 
     const grouped = await prisma.ticketAsset.groupBy({
       by: ['assetId'],
       where: {
         assetId: { in: assetIds },
-        ticket: { status: { in: openStatuses } },
+        ticket: {
+          status: { in: selectedStatuses },
+          ...(createdAt ? { createdAt } : {}),
+        },
       },
       _count: { ticketId: true },
     });

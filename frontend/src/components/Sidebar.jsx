@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'technician'] },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'technician', 'viewer'] },
   { to: '/tickets', label: 'Ticket', icon: Ticket, roles: ['admin', 'technician', 'user'] },
   { to: '/users', label: 'Utenti', icon: Users, roles: ['admin'] },
   { to: '/categories', label: 'Categorie', icon: FolderKanban, roles: ['admin'] },
@@ -67,7 +67,9 @@ export default function Sidebar() {
 
         <nav className="flex-1 space-y-1 px-3 py-4">
           {filteredNav.map((item) => {
-            const active = location.pathname === item.to || location.pathname.startsWith(item.to + '/')
+            const active = item.to === '/settings'
+              ? location.pathname === '/settings'
+              : location.pathname === item.to || location.pathname.startsWith(item.to + '/')
             return (
               <Link
                 key={item.to}
@@ -87,21 +89,23 @@ export default function Sidebar() {
         </nav>
 
         <div className="border-t border-slate-700/60 p-3">
-          <Link
-            to="/profile"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
-          >
-            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-xs font-semibold">
-              {user.firstName?.[0]}{user.lastName?.[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="truncate font-medium">{user.firstName} {user.lastName}</div>
-              <div className="truncate text-xs text-slate-400 capitalize">{user.role}</div>
-            </div>
-          </Link>
+          {user.role !== 'viewer' && (
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
+            >
+              <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-xs font-semibold">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="truncate font-medium">{user.firstName} {user.lastName}</div>
+                <div className="truncate text-xs text-slate-400 capitalize">{user.role}</div>
+              </div>
+            </Link>
+          )}
           <button
             onClick={logout}
-            className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-rose-400 transition-colors hover:bg-rose-500/10"
+            className={`${user.role !== 'viewer' ? 'mt-2' : ''} flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-rose-400 transition-colors hover:bg-rose-500/10`}
           >
             <LogOut size={18} />
             Logout

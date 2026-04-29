@@ -44,11 +44,18 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/" element={user?.role === 'user' ? <Navigate to="/tickets" replace /> : <Dashboard />} />
-            <Route path="/tickets" element={<TicketsList />} />
-            <Route path="/tickets/new" element={<NewTicket />} />
-            <Route path="/tickets/:id" element={<TicketDetail />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route
+              path="/"
+              element={(user?.role === 'user') ? <Navigate to="/tickets" replace /> : <Dashboard />}
+            />
+            <Route element={<ProtectedRoute roles={['admin', 'technician', 'user']} />}>
+              <Route path="/tickets" element={<TicketsList />} />
+              <Route path="/tickets/new" element={<NewTicket />} />
+              <Route path="/tickets/:id" element={<TicketDetail />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={['admin', 'technician', 'user']} />}>
+              <Route path="/profile" element={<Profile />} />
+            </Route>
             <Route element={<ProtectedRoute roles={['admin']} />}>
               <Route path="/users" element={<Users />} />
               <Route path="/categories" element={<Categories />} />

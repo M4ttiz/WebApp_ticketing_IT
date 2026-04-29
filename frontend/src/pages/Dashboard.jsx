@@ -57,7 +57,26 @@ export default function Dashboard() {
         <p className={ui.subtleText}>Panoramica ticket e performance operative</p>
       </div>
 
-      {/* Filtri dashboard */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <KpiCard title="Ticket aperti" value={kpi.totalOpen} icon={Inbox} colorClass="text-blue-400" delay={0} />
+            <KpiCard title="In lavorazione" value={kpi.inProgress} icon={Clock} colorClass="text-orange-400" delay={0.1} />
+            <KpiCard title="Risolti oggi" value={kpi.resolvedToday} icon={CheckCircle2} colorClass="text-green-400" delay={0.2} />
+            <KpiCard title="Tempo medio (h)" value={kpi.avgResolutionHours} icon={Timer} colorClass="text-purple-400" delay={0.3} />
+          </>
+        )}
+      </div>
+
+      {/* Filtri dashboard (sopra i grafici) */}
       <div className={`${ui.cardSection} p-4 flex flex-col sm:flex-row sm:items-center gap-3`}>
         <div className="min-w-[180px]">
           <label className="block text-xs text-slate-400 mb-1">Stato</label>
@@ -100,25 +119,6 @@ export default function Dashboard() {
                 })}
               </select>
             </div>
-          </>
-        )}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : (
-          <>
-            <KpiCard title="Ticket aperti" value={kpi.totalOpen} icon={Inbox} colorClass="text-blue-400" delay={0} />
-            <KpiCard title="In lavorazione" value={kpi.inProgress} icon={Clock} colorClass="text-orange-400" delay={0.1} />
-            <KpiCard title="Risolti oggi" value={kpi.resolvedToday} icon={CheckCircle2} colorClass="text-green-400" delay={0.2} />
-            <KpiCard title="Tempo medio (h)" value={kpi.avgResolutionHours} icon={Timer} colorClass="text-purple-400" delay={0.3} />
           </>
         )}
       </div>

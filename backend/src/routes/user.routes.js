@@ -54,10 +54,10 @@ router.post(
   [
     body('firstName').trim().notEmpty().withMessage('Nome obbligatorio'),
     body('lastName').trim().notEmpty().withMessage('Cognome obbligatorio'),
-    body('email').isEmail().withMessage('Email non valida').normalizeEmail(),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Email non valida').normalizeEmail(),
     body('role')
       .optional()
-      .isIn(['user', 'technician', 'admin']).withMessage('Ruolo non valido'),
+      .isIn(['user', 'viewer', 'technician', 'admin']).withMessage('Ruolo non valido'),
     body('department').optional().trim(),
   ],
   validate,
@@ -79,8 +79,8 @@ router.patch(
   requireRole(['admin']),
   [
     param('id').isUUID().withMessage('ID utente non valido'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
-    body('role').optional().isIn(['user', 'technician', 'admin']),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Email non valida'),
+    body('role').optional().isIn(['user', 'viewer', 'technician', 'admin']),
     body('isActive').optional().isBoolean(),
   ],
   validate,
