@@ -5,7 +5,7 @@ echo "[entrypoint] Generating Prisma client..."
 npx prisma generate
 
 echo "[entrypoint] Applying non-destructive category type migration if needed..."
-npx prisma db execute --stdin <<'SQL'
+npx prisma db execute --schema prisma/schema.prisma --stdin <<'SQL'
 DO $$
 BEGIN
   IF EXISTS (
