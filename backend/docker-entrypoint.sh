@@ -5,7 +5,7 @@ echo "[entrypoint] Generating Prisma client..."
 npx prisma generate
 
 echo "[entrypoint] Applying non-destructive category type migration if needed..."
-npx prisma db execute --schema prisma/schema.prisma --stdin <<'SQL'
+npx prisma --schema prisma/schema.prisma db execute --stdin <<'SQL' || true
 DO $$
 BEGIN
   IF EXISTS (
@@ -24,7 +24,7 @@ END $$;
 SQL
 
 echo "[entrypoint] Syncing schema to database (db push)..."
-if ! npx prisma db push --accept-data-loss --skip-generate; then
+if ! npx prisma --schema prisma/schema.prisma db push --accept-data-loss --skip-generate; then
   echo "[entrypoint] WARNING: prisma db push failed, continuing with existing schema."
 fi
 
