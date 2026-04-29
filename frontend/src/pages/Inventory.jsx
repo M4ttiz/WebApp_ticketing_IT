@@ -322,12 +322,12 @@ export default function Inventory() {
         </div>
 
         <div className={`${ui.cardSection} h-fit`}>
-          <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex flex-col gap-3 mb-3">
             <div>
               <h3 className="text-sm font-semibold">KPI ticket per prodotto (Top {kpiLimit})</h3>
               <p className="text-xs text-slate-400 mt-1">Filtrato in base ai criteri attivi su ricerca/categoria/sede/reparto</p>
             </div>
-            <div className="grid grid-cols-2 gap-2 min-w-[280px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Top N</label>
                 <select

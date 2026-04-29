@@ -14,7 +14,7 @@ export default function Users() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
-  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', role: 'user' })
+  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', username: '', role: 'user' })
   const [showCreate, setShowCreate] = useState(false)
 
   const fetchUsers = async () => {
@@ -91,7 +91,7 @@ export default function Users() {
         toast.success('Utente creato')
       }
       setShowCreate(false)
-      setNewUser({ firstName: '', lastName: '', email: '', role: 'user' })
+      setNewUser({ firstName: '', lastName: '', email: '', username: '', role: 'user' })
       fetchUsers()
     } catch (e) {
       toast.error(e.response?.data?.error || 'Errore')
@@ -179,6 +179,14 @@ export default function Users() {
               <input placeholder="Nome" value={newUser.firstName} onChange={(e) => setNewUser((p) => ({ ...p, firstName: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
               <input placeholder="Cognome" value={newUser.lastName} onChange={(e) => setNewUser((p) => ({ ...p, lastName: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
               <input placeholder="Email (opzionale per account locale)" type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm" />
+              {!newUser.email?.trim() && (
+                <input
+                  placeholder="Username locale (opzionale, es. mario.rossi)"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser((p) => ({ ...p, username: e.target.value }))}
+                  className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm"
+                />
+              )}
               <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm">
                 {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>

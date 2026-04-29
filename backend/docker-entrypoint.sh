@@ -8,6 +8,19 @@ echo "[entrypoint] Applying non-destructive category type migration if needed...
 npx prisma --schema prisma/schema.prisma db execute --stdin <<'SQL' || true
 DO $$
 BEGIN
+  -- Add viewer role if missing (safe for existing deployments).
+  IF EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'Role'
+  ) THEN
+    BEGIN
+      ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'viewer';
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM information_schema.columns

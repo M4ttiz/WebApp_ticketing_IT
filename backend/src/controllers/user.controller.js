@@ -80,9 +80,28 @@ async function listUsers(req, res, next) {
  */
 async function createUser(req, res, next) {
   try {
-    const { firstName, lastName, email, role = 'user', department } = req.body;
+    const { firstName, lastName, email, username, role = 'user', department } = req.body;
     const normalizedEmail = email?.toLowerCase().trim();
-    const resolvedEmail = normalizedEmail || `local.${crypto.randomUUID()}@local.user`;
+    const normalizeLocalUsername = (value) => String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]/g, '');
+    const baseLocalUsername = normalizeLocalUsername(
+      username?.trim() || `${firstName}${lastName}`
+    ).slice(0, 40) || 'localuser';
+    let resolvedEmail = normalizedEmail;
+
+    // For local users (without email), generate short editable username@local.user.
+    if (!resolvedEmail) {
+      let candidate = `${baseLocalUsername}@local.user`;
+      let suffix = 1;
+      while (await prisma.user.findUnique({ where: { email: candidate } })) {
+        candidate = `${baseLocalUsername}${suffix}@local.user`;
+        suffix += 1;
+      }
+      resolvedEmail = candidate;
+    }
 
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email: resolvedEmail } });

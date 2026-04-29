@@ -55,6 +55,7 @@ router.post(
     body('firstName').trim().notEmpty().withMessage('Nome obbligatorio'),
     body('lastName').trim().notEmpty().withMessage('Cognome obbligatorio'),
     body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Email non valida').normalizeEmail(),
+    body('username').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 3, max: 50 }).withMessage('Username locale non valido'),
     body('role')
       .optional()
       .isIn(['user', 'viewer', 'technician', 'admin']).withMessage('Ruolo non valido'),
