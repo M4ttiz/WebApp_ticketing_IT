@@ -100,8 +100,8 @@ export default function Header() {
   const crumbs = breadcrumbsFromPath(location.pathname)
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border-subtle bg-surface-main px-4 sm:px-6">
-      <nav className="hidden min-w-0 flex-1 items-center gap-2 text-sm md:flex" aria-label="Breadcrumb">
+    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border-subtle bg-surface-main px-5 sm:px-7">
+      <nav className="hidden min-w-0 flex-1 items-center gap-2 text-[13px] md:flex" aria-label="Breadcrumb">
         {crumbs.length === 0 ? (
           <span className="truncate text-text-primary">Home</span>
         ) : (
@@ -120,7 +120,7 @@ export default function Header() {
         )}
       </nav>
 
-      <form onSubmit={submitSearch} className="mx-auto hidden max-w-md flex-1 md:block">
+      <form onSubmit={submitSearch} className="mx-auto hidden max-w-[520px] flex-1 md:block">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" aria-hidden />
           <input
@@ -129,7 +129,7 @@ export default function Header() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Cerca ovunque…"
-            className="w-full rounded-ds border border-border-subtle bg-surface-card py-2 pl-10 pr-16 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent/20"
+            className="w-full rounded-ds border border-border-subtle bg-surface-card py-2 pl-10 pr-16 text-[13px] text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent/20"
             aria-label="Ricerca globale"
           />
           <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-border-subtle bg-surface-hover px-1.5 py-0.5 text-[10px] font-medium text-text-secondary sm:inline-block">

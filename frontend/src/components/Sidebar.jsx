@@ -129,11 +129,11 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 py-4">
+        <nav className="flex-1 overflow-y-auto px-2 py-5">
           {filteredSections.map((section) => (
             <div key={section.heading} className="mb-6">
               {!collapsed && (
-                <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-text-disabled">{section.heading}</div>
+                <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-disabled">{section.heading}</div>
               )}
               <ul className="space-y-1">
                 {section.items.map((item) => {
@@ -148,13 +148,13 @@ export default function Sidebar() {
                         onClick={() => setMobileOpen(false)}
                         title={collapsed ? label : undefined}
                         className={cn(
-                          'group flex h-10 items-center gap-3 rounded-ds border-l-[3px] px-3 text-sm font-medium transition-colors duration-150',
+                          'group flex h-10 items-center gap-3 rounded-ds border-l-[3px] px-3 text-[13px] font-medium transition-colors duration-150',
                           active
                             ? 'border-accent bg-surface-hover text-text-primary'
-                            : 'border-transparent text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+                            : 'border-transparent text-text-secondary hover:bg-[#1A1D25] hover:text-text-primary'
                         )}
                       >
-                        <Icon size={18} className="shrink-0 opacity-90" aria-hidden />
+                        <Icon size={17} className="shrink-0 opacity-85" aria-hidden />
                         {!collapsed && <span className="truncate">{label}</span>}
                       </Link>
                     </li>

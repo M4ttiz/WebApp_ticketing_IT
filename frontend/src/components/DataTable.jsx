@@ -17,14 +17,14 @@ export default function DataTable({
   return (
     <div className={cn(ui.card, 'overflow-hidden')}>
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-text-primary">
+        <table className="w-full text-left text-[13px] text-text-primary">
           <thead className="border-b border-border-subtle bg-surface-card">
             <tr>
               {columns.map((col, idx) => (
                 <th
                   key={col.key}
                   className={cn(
-                    'px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-text-secondary',
+                    'px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary',
                     idx === 0 && 'font-bold text-text-primary',
                     col.className
                   )}
@@ -57,9 +57,9 @@ export default function DataTable({
               </tr>
             ) : (
               data.map((row, i) => (
-                <tr key={row.id || i} className="border-b border-border-subtle/80 transition-colors duration-150 hover:bg-surface-hover/80">
+                <tr key={row.id || i} className="border-b border-border-subtle/80 transition-colors duration-150 hover:bg-[#1A1D25]">
                   {columns.map((col, idx) => (
-                    <td key={col.key} className={cn('px-4 py-3 text-text-primary', idx === 0 && 'font-semibold', col.className)}>
+                    <td key={col.key} className={cn('px-4 py-3.5 text-text-primary', idx === 0 && 'font-semibold', col.className)}>
                       {col.render ? col.render(row) : row[col.key]}
                     </td>
                   ))}

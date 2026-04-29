@@ -29,13 +29,6 @@ body {
   background: #4a4e62;
 }
 
-/* Glass helper */
-.glass {
-  background: rgba(22, 24, 30, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
 /* Form focus — design system ring */
 input:not([type="checkbox"]):not([type="radio"]),
 textarea,
@@ -45,7 +38,7 @@ select {
 
 /* Button micro-interactions */
 button:not(:disabled):not([aria-disabled="true"]) {
-  @apply transition-colors duration-150 active:scale-[0.98];
+  @apply transition-colors duration-150;
 }
 
 /* Skeleton */
