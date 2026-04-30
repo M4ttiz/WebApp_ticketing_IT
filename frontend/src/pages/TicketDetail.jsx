@@ -8,7 +8,7 @@ import CommentThread from '../components/CommentThread'
 import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
-import { getAssets } from '../api/assets'
+import { getAssets, getAsset } from '../api/assets'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ui } from '../lib/utils'
@@ -94,7 +94,16 @@ export default function TicketDetail() {
       setAssigneeId(tRes.data.assigneeId || '')
       const currentAsset = tRes.data.assets?.[0]?.asset || null
       setAssetId(currentAsset?.id || '')
-      setSelectedAsset(currentAsset)
+      if (currentAsset?.id) {
+        try {
+          const assetRes = await getAsset(currentAsset.id)
+          setSelectedAsset(assetRes.data || currentAsset)
+        } catch (assetErr) {
+          setSelectedAsset(currentAsset)
+        }
+      } else {
+        setSelectedAsset(null)
+      }
       setAssetSearch(currentAsset?.name || '')
       setAssetResults([])
     } catch (e) {
@@ -196,6 +205,8 @@ export default function TicketDetail() {
   }
 
   const availableTransitions = STATUS_FLOW[ticket.status] || []
+  const linkedAsset = ticket.assets?.[0]?.asset
+  const detailedLinkedAsset = selectedAsset?.id === linkedAsset?.id ? selectedAsset : linkedAsset
 
   return (
     <div className={ui.page}>
@@ -373,25 +384,25 @@ export default function TicketDetail() {
 
         {/* Timeline + Attachments */}
         <div className="space-y-4">
-          {ticket.assets?.[0]?.asset && (
+          {detailedLinkedAsset && (
             <div className={ui.cardSection}>
               <h3 className="font-semibold text-sm mb-4">Asset collegato</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-slate-200">
                   <Package size={15} className="text-primary-400" />
-                  <span>Nome: {ticket.assets[0].asset.name || '-'}</span>
+                  <span>Nome: {detailedLinkedAsset.name || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <MonitorSmartphone size={15} className="text-primary-400" />
-                  <span>MODELLO: {ticket.assets[0].asset.model || '-'}</span>
+                  <span>MODELLO: {detailedLinkedAsset.model || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <Building2 size={15} className="text-primary-400" />
-                  <span>Sede / Ubicazione: {ticket.assets[0].asset.location || '-'}</span>
+                  <span>Sede / Ubicazione: {detailedLinkedAsset.location || detailedLinkedAsset.sede || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <Briefcase size={15} className="text-primary-400" />
-                  <span>Reparto: {ticket.assets[0].asset.assignedTo || '-'}</span>
+                  <span>Reparto: {detailedLinkedAsset.assignedTo || detailedLinkedAsset.department || detailedLinkedAsset.reparto || '-'}</span>
                 </div>
               </div>
             </div>
