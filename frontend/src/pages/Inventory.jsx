@@ -30,7 +30,7 @@ const DEFAULT_CATEGORIES = [
 
 export default function Inventory() {
   const { user } = useAuth()
-  const [assets, setAssets] = useState([])
+  const [rawAssets, setRawAssets] = useState([])
   const [kpiItems, setKpiItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [kpiLoading, setKpiLoading] = useState(true)
@@ -53,7 +53,7 @@ export default function Inventory() {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDebouncedSearch(search)
-    }, 350)
+    }, 300)
     return () => clearTimeout(timeoutId)
   }, [search])
 
@@ -76,14 +76,8 @@ export default function Inventory() {
         ...(categoryFilter !== 'Tutte' && { category: categoryFilter }),
       }
       const res = await getAssets(params)
-      let items = res.data.items || []
-      if (locationFilter.trim()) {
-        items = items.filter((item) => (item.location || '').toLowerCase().includes(locationFilter.toLowerCase()))
-      }
-      if (departmentFilter.trim()) {
-        items = items.filter((item) => (item.assignedTo || '').toLowerCase().includes(departmentFilter.toLowerCase()))
-      }
-      setAssets(items)
+      const items = res.data.items || []
+      setRawAssets(items)
     } catch (err) {
       toast.error('Errore nel caricamento degli asset')
     } finally {
@@ -115,6 +109,9 @@ export default function Inventory() {
 
   useEffect(() => {
     fetchAssets()
+  }, [debouncedSearch, categoryFilter])
+
+  useEffect(() => {
     fetchTopKpi()
   }, [debouncedSearch, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
 
@@ -151,9 +148,22 @@ export default function Inventory() {
     setModalOpen(true)
   }
 
+  const filteredAssets = useMemo(() => {
+    const locationNeedle = locationFilter.trim().toLowerCase()
+    const departmentNeedle = departmentFilter.trim().toLowerCase()
+
+    if (!locationNeedle && !departmentNeedle) return rawAssets
+
+    return rawAssets.filter((item) => {
+      const locationMatches = !locationNeedle || (item.location || '').toLowerCase().includes(locationNeedle)
+      const departmentMatches = !departmentNeedle || (item.assignedTo || '').toLowerCase().includes(departmentNeedle)
+      return locationMatches && departmentMatches
+    })
+  }, [rawAssets, locationFilter, departmentFilter])
+
   const groupedAssets = useMemo(() => {
     const groups = {}
-    assets.forEach((asset) => {
+    filteredAssets.forEach((asset) => {
       const key = asset.category || 'ALTRO'
       if (!groups[key]) groups[key] = []
       groups[key].push(asset)
@@ -162,7 +172,7 @@ export default function Inventory() {
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b, 'it'))
       .map(([category, list]) => [category, list.sort((a, b) => (a.assetTag || '').localeCompare(b.assetTag || '', 'it'))])
-  }, [assets])
+  }, [filteredAssets])
 
   const kpiChartData = useMemo(() => {
     return (kpiItems || []).map((item, idx) => ({
@@ -178,7 +188,7 @@ export default function Inventory() {
 
   const kpiColors = ['#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b', '#10b981', '#a855f7']
 
-  const exportData = assets.map((item) => ({
+  const exportData = filteredAssets.map((item) => ({
     DESCRIZIONE: item.name || '',
     MODELLO: item.model || '',
     CATEGORIA: item.category || '',
