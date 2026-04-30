@@ -46,8 +46,16 @@ export default function Inventory() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
   const isAdmin = user?.role === 'admin'
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 350)
+    return () => clearTimeout(timeoutId)
+  }, [search])
 
   useEffect(() => {
     api.get('/settings/asset-categories')
@@ -63,8 +71,8 @@ export default function Inventory() {
     try {
       const params = {
         page: 1,
-        limit: 100,
-        ...(search && { search }),
+        limit: 1000,
+        ...(debouncedSearch && { search: debouncedSearch }),
         ...(categoryFilter !== 'Tutte' && { category: categoryFilter }),
       }
       const res = await getAssets(params)
@@ -91,7 +99,7 @@ export default function Inventory() {
         status: kpiStatusFilter,
         ...(kpiMonth && { month: kpiMonth }),
         ...(kpiYear && { year: kpiYear }),
-        ...(search && { search }),
+        ...(debouncedSearch && { search: debouncedSearch }),
         ...(categoryFilter !== 'Tutte' && { category: categoryFilter }),
         ...(locationFilter && { location: locationFilter }),
         ...(departmentFilter && { department: departmentFilter }),
@@ -108,15 +116,18 @@ export default function Inventory() {
   useEffect(() => {
     fetchAssets()
     fetchTopKpi()
-  }, [search, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
+  }, [debouncedSearch, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
       fetchAssets()
       fetchTopKpi()
-    }, 30000)
+    }, 60000)
     return () => clearInterval(intervalId)
-  }, [search, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
+  }, [debouncedSearch, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
 
   const handleDelete = async (id) => {
     try {

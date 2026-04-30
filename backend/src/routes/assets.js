@@ -18,7 +18,7 @@ router.get(
   '/',
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Page non valido'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit non valido'),
+    query('limit').optional().isInt({ min: 1, max: 1000 }).withMessage('Limit non valido'),
     query('category').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Categoria non valida'),
     query('status').optional().isIn(['DISPONIBILE', 'IN_USO', 'IN_MANUTENZIONE', 'DISMESSO', 'GUASTO']).withMessage('Stato non valido'),
     query('search').optional().trim().isLength({ max: 200 }).withMessage('Ricerca troppo lunga'),
