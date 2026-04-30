@@ -28,7 +28,7 @@ import {
   Search,
   X,
   Package,
-  Tag,
+  MonitorSmartphone,
   Building2,
   Briefcase,
 } from 'lucide-react'
@@ -379,23 +379,19 @@ export default function TicketDetail() {
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-slate-200">
                   <Package size={15} className="text-primary-400" />
-                  <span>{ticket.assets[0].asset.name || '-'}</span>
+                  <span>Nome: {ticket.assets[0].asset.name || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
-                  <Tag size={15} className="text-primary-400" />
-                  <span>{ticket.assets[0].asset.brand || '-'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <Tag size={15} className="text-primary-400" />
-                  <span>{ticket.assets[0].asset.model || '-'}</span>
+                  <MonitorSmartphone size={15} className="text-primary-400" />
+                  <span>MODELLO: {ticket.assets[0].asset.model || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <Building2 size={15} className="text-primary-400" />
-                  <span>{ticket.assets[0].asset.location || '-'}</span>
+                  <span>Sede / Ubicazione: {ticket.assets[0].asset.location || '-'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <Briefcase size={15} className="text-primary-400" />
-                  <span>{ticket.assets[0].asset.assignedTo || '-'}</span>
+                  <span>Reparto: {ticket.assets[0].asset.assignedTo || '-'}</span>
                 </div>
               </div>
             </div>

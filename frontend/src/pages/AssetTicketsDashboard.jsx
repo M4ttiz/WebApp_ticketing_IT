@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { toast } from 'sonner'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { getTopOpenTicketsByProduct } from '../api/assets'
 import { ui } from '../lib/utils'
 
@@ -12,6 +13,7 @@ export default function AssetTicketsDashboard() {
   const [useMonthYear, setUseMonthYear] = useState(false)
   const [month, setMonth] = useState(String(now.getMonth() + 1))
   const [year, setYear] = useState(String(now.getFullYear()))
+  const [topLimit, setTopLimit] = useState(10)
 
   useEffect(() => {
     let active = true
@@ -20,11 +22,15 @@ export default function AssetTicketsDashboard() {
       setLoading(true)
       try {
         const params = {
+          limit: topLimit,
           status: statusFilter,
           ...(useMonthYear ? { month, year } : {}),
         }
         const res = await getTopOpenTicketsByProduct(params)
-        if (active) setItems(res.data.items || [])
+        if (active) {
+          const sorted = [...(res.data.items || [])].sort((a, b) => (b.openTickets || 0) - (a.openTickets || 0))
+          setItems(sorted.slice(0, topLimit))
+        }
       } catch (err) {
         if (active) toast.error('Errore nel caricamento ticket per asset')
       } finally {
@@ -36,7 +42,15 @@ export default function AssetTicketsDashboard() {
     return () => {
       active = false
     }
-  }, [statusFilter, useMonthYear, month, year])
+  }, [statusFilter, useMonthYear, month, year, topLimit])
+
+  const chartData = items.map((item, idx) => ({
+    id: item.id ?? String(idx),
+    asset: item.descrizione || item.name || '-',
+    openTickets: item.openTickets || 0,
+  }))
+
+  const chartColors = ['#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b']
 
   return (
     <div className={ui.page}>
@@ -55,6 +69,15 @@ export default function AssetTicketsDashboard() {
             <option value="OPEN">Aperti</option>
             <option value="CLOSED">Chiusi</option>
             <option value="ALL">Tutti</option>
+          </select>
+        </div>
+
+        <div className="min-w-[160px]">
+          <label className="block text-xs text-slate-400 mb-1">Mostra Top</label>
+          <select value={topLimit} onChange={(e) => setTopLimit(parseInt(e.target.value, 10))} className={ui.select}>
+            {[5, 10, 20, 50].map((n) => (
+              <option key={n} value={n}>{n} asset</option>
+            ))}
           </select>
         </div>
 
@@ -91,6 +114,41 @@ export default function AssetTicketsDashboard() {
               </select>
             </div>
           </>
+        )}
+      </div>
+
+      <div className={ui.cardSection}>
+        <h3 className="font-semibold text-sm mb-4">Grafico ticket aperti per asset</h3>
+        {loading ? (
+          <div className="h-72 flex items-center justify-center text-sm text-slate-400">Caricamento grafico...</div>
+        ) : chartData.length === 0 ? (
+          <div className="h-72 flex items-center justify-center text-sm text-slate-500">Nessun dato da visualizzare</div>
+        ) : (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis
+                  dataKey="asset"
+                  stroke="#94a3b8"
+                  fontSize={12}
+                  tickFormatter={(v) => (v.length > 18 ? `${v.slice(0, 16)}…` : v)}
+                />
+                <YAxis stroke="#94a3b8" fontSize={12} />
+                <Tooltip
+                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                  labelStyle={{ color: '#f1f5f9' }}
+                  itemStyle={{ color: '#f1f5f9' }}
+                  formatter={(val) => [`${val} ticket`, '']}
+                />
+                <Bar dataKey="openTickets" radius={[6, 6, 0, 0]}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={chartColors[i % chartColors.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
 
