@@ -181,7 +181,7 @@ async function topOpenTicketsByProduct(req, res, next) {
  */
 async function getAssetStats(req, res, next) {
   try {
-    const [byCategoryRaw, byLocationRaw, byStatusRaw] = await Promise.all([
+    const [rawByCategory, rawBySede, rawByStatus] = await Promise.all([
       prisma.asset.groupBy({
         by: ['category'],
         _count: { id: true },
@@ -196,20 +196,42 @@ async function getAssetStats(req, res, next) {
       }),
     ]);
 
-    const byCategory = byCategoryRaw.map((item) => ({
-      category: item.category || 'Altro',
-      count: item._count.id,
-    }));
+    const byCategory = rawByCategory
+      .map((item) => ({
+        category: String(item.category || 'Altro').trim().toUpperCase(),
+        count: item._count.id,
+      }))
+      .reduce((acc, curr) => {
+        const existing = acc.find((item) => item.category === curr.category);
+        if (existing) existing.count += curr.count;
+        else acc.push({ ...curr });
+        return acc;
+      }, [])
+      .sort((a, b) => b.count - a.count);
 
-    const bySede = byLocationRaw.map((item) => ({
-      sede: item.location || 'Sede non definita',
-      count: item._count.id,
-    }));
+    const bySede = rawBySede
+      .map((item) => ({ sede: String(item.location || 'Sede non definita').trim().toLowerCase(), count: item._count.id }))
+      .reduce((acc, curr) => {
+        const existing = acc.find((item) => item.sede === curr.sede);
+        if (existing) existing.count += curr.count;
+        else acc.push({ ...curr });
+        return acc;
+      }, [])
+      .map((item) => ({ sede: item.sede.charAt(0).toUpperCase() + item.sede.slice(1), count: item.count }))
+      .sort((a, b) => b.count - a.count);
 
-    const byStatus = byStatusRaw.map((item) => ({
-      status: item.status || 'DISPONIBILE',
-      count: item._count.id,
-    }));
+    const byStatus = rawByStatus
+      .map((item) => ({
+        status: String(item.status || 'DISPONIBILE').trim().toUpperCase(),
+        count: item._count.id,
+      }))
+      .reduce((acc, curr) => {
+        const existing = acc.find((item) => item.status === curr.status);
+        if (existing) existing.count += curr.count;
+        else acc.push({ ...curr });
+        return acc;
+      }, [])
+      .sort((a, b) => b.count - a.count);
 
     return res.json({
       byCategory,

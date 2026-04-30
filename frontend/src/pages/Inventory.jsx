@@ -114,6 +114,15 @@ function toCardStyle(hexColor, selected) {
   }
 }
 
+function normalizeLooseValue(value, fallback = '') {
+  const normalized = String(value || '').trim()
+  return normalized || fallback
+}
+
+function getUniqueSortedValues(items) {
+  return Array.from(new Set(items.map((item) => normalizeLooseValue(item)).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'it'))
+}
+
 export default function Inventory() {
   const { user } = useAuth()
   const [rawAssets, setRawAssets] = useState([])
@@ -165,7 +174,6 @@ export default function Inventory() {
       const params = {
         page: 1,
         limit: 1000,
-        ...(debouncedSearch && { search: debouncedSearch }),
         ...(categoryFilter !== 'Tutte' && { category: categoryFilter }),
       }
       const res = await getAssets(params)
@@ -267,16 +275,20 @@ export default function Inventory() {
     const locationNeedle = locationFilter.trim().toLowerCase()
     const departmentNeedle = departmentFilter.trim().toLowerCase()
     const statusNeedle = statusFilter.trim().toUpperCase()
+    const searchNeedle = search.trim().toLowerCase()
 
-    if (!locationNeedle && !departmentNeedle && !statusNeedle) return rawAssets
+    if (!locationNeedle && !departmentNeedle && !statusNeedle && !searchNeedle) return rawAssets
 
     return rawAssets.filter((item) => {
+      const nameValue = String(item.name || '').toLowerCase()
+      const modelValue = String(item.model || '').toLowerCase()
+      const searchMatches = !searchNeedle || nameValue.includes(searchNeedle) || modelValue.includes(searchNeedle)
       const locationMatches = !locationNeedle || (item.location || '').toLowerCase().includes(locationNeedle)
       const departmentMatches = !departmentNeedle || (item.assignedTo || '').toLowerCase().includes(departmentNeedle)
       const statusMatches = !statusNeedle || normalizeStatusName(item.status) === statusNeedle
-      return locationMatches && departmentMatches && statusMatches
+      return searchMatches && locationMatches && departmentMatches && statusMatches
     })
-  }, [rawAssets, locationFilter, departmentFilter, statusFilter])
+  }, [rawAssets, locationFilter, departmentFilter, statusFilter, search])
 
   const categoryCards = useMemo(() => {
     return (statsData.byCategory || []).map((item) => {
@@ -314,6 +326,39 @@ export default function Inventory() {
       }
     })
   }, [statsData])
+
+  const sedeOptions = useMemo(() => getUniqueSortedValues((statsData.bySede || []).map((item) => item.sede || '')), [statsData])
+  const repartoOptions = useMemo(() => getUniqueSortedValues((rawAssets || []).map((item) => item.assignedTo || '')), [rawAssets])
+  const categoryOptions = useMemo(() => {
+    const normalized = getUniqueSortedValues((statsData.byCategory || []).map((item) => item.category || 'ALTRO'))
+    return ['Tutte', ...normalized]
+  }, [statsData])
+  const statusOptions = useMemo(() => {
+    return getUniqueSortedValues((statsData.byStatus || []).map((item) => normalizeStatusName(item.status)))
+  }, [statsData])
+
+  const handleCategoryCardClick = (card) => {
+    const isSelected = categoryFilter !== 'Tutte' && normalizeCategoryName(categoryFilter) === card.key
+    setCategoryFilter(isSelected ? 'Tutte' : card.filterValue)
+  }
+
+  const handleSedeCardClick = (card) => {
+    const isSelected = locationFilter.trim().toLowerCase() === card.label.trim().toLowerCase()
+    setLocationFilter(isSelected ? '' : card.label)
+  }
+
+  const handleStatusCardClick = (card) => {
+    const isSelected = normalizeStatusName(statusFilter) === card.key
+    setStatusFilter(isSelected ? '' : card.key)
+  }
+
+  const handleResetQuickFilters = () => {
+    setSearch('')
+    setCategoryFilter('Tutte')
+    setLocationFilter('')
+    setDepartmentFilter('')
+    setStatusFilter('')
+  }
 
   const groupedAssets = useMemo(() => {
     const groups = {}
@@ -421,7 +466,7 @@ export default function Inventory() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Dashboard inventario per categoria</h2>
           <p className="text-xs text-slate-400">Clicca una card per filtrare la tabella sottostante</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(110px,1fr))]">
           {statsLoading ? (
             <div className="col-span-full text-sm text-slate-400">Caricamento card categoria...</div>
           ) : (
@@ -435,14 +480,14 @@ export default function Inventory() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.2 }}
                   whileHover={{ scale: 1.03 }}
-                  className="relative rounded-xl p-3 text-left text-white min-h-[100px] min-w-[140px] cursor-pointer transition-all"
+                  className="relative rounded-xl p-2 text-left text-white min-h-[80px] min-w-[110px] cursor-pointer transition-all"
                   style={toCardStyle(card.color, isSelected)}
-                  onClick={() => setCategoryFilter(isSelected ? 'Tutte' : card.filterValue)}
+                  onClick={() => handleCategoryCardClick(card)}
                 >
                   <span className="absolute top-2 right-3 text-xl opacity-90">{card.icon}</span>
-                  <div className="absolute bottom-3 left-3">
-                    <p className="text-[28px] leading-none font-bold">{card.count}</p>
-                    <p className="text-xs opacity-85">{card.label}</p>
+                  <div className="absolute bottom-2 left-2">
+                    <p className="text-[22px] leading-none font-bold">{card.count}</p>
+                    <p className="text-[10px] opacity-85">{card.label}</p>
                   </div>
                 </motion.button>
               )
@@ -469,7 +514,7 @@ export default function Inventory() {
                   whileHover={{ scale: 1.03 }}
                   className="relative rounded-xl p-3 text-left text-white min-h-[100px] min-w-[140px] cursor-pointer transition-all"
                   style={toCardStyle(card.color, isSelected)}
-                  onClick={() => setLocationFilter(isSelected ? '' : card.label)}
+                  onClick={() => handleSedeCardClick(card)}
                 >
                   <span className="absolute top-2 right-3 text-xl opacity-90">{card.icon}</span>
                   <div className="absolute bottom-3 left-3">
@@ -501,7 +546,7 @@ export default function Inventory() {
                   whileHover={{ scale: 1.03 }}
                   className="relative rounded-xl p-3 text-left text-white min-h-[100px] min-w-[140px] cursor-pointer transition-all"
                   style={toCardStyle(card.color, isSelected)}
-                  onClick={() => setStatusFilter(isSelected ? '' : card.key)}
+                  onClick={() => handleStatusCardClick(card)}
                 >
                   <span className="absolute top-2 right-3 text-xl opacity-90">{card.icon}</span>
                   <div className="absolute bottom-3 left-3">
@@ -512,6 +557,50 @@ export default function Inventory() {
               )
             })
           )}
+        </div>
+      </div>
+
+      <div className={`${ui.cardSection} p-4`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Ricerca descrizione o modello..."
+              className={`${ui.input} pl-9`}
+            />
+          </div>
+          <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className={ui.select}>
+            <option value="">Tutte le sedi</option>
+            {sedeOptions.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          <select value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className={ui.select}>
+            <option value="">Tutti i reparti</option>
+            {repartoOptions.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className={ui.select}>
+            {categoryOptions.map((item) => (
+              <option key={item} value={item}>{item === 'Tutte' ? 'Tutte le categorie' : item}</option>
+            ))}
+          </select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={ui.select}>
+            <option value="">Tutti gli stati</option>
+            {statusOptions.map((item) => (
+              <option key={item} value={item}>{statusLabel(item)}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleResetQuickFilters}
+            className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 transition-colors text-white"
+          >
+            Azzera filtri
+          </button>
         </div>
       </div>
 
