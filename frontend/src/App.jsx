@@ -11,7 +11,7 @@ import Settings from './pages/Settings'
 import AssetCategoriesAdmin from './pages/AssetCategoriesAdmin'
 import Profile from './pages/Profile'
 import Categories from './pages/Categories'
-import Inventory from './pages/Inventory'
+import InventoryV2 from './pages/InventoryV2'
 import AssetDetail from './pages/AssetDetail'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -63,7 +63,8 @@ function App() {
               <Route path="/settings/asset-categories" element={<AssetCategoriesAdmin />} />
             </Route>
             <Route element={<ProtectedRoute roles={['admin', 'technician']} />}>
-              <Route path="/inventory" element={<Inventory />} />
+              {/* Legacy inventory page kept in pages/Inventory.jsx */}
+              <Route path="/inventory" element={<InventoryV2 />} />
               <Route path="/inventory/:id" element={<AssetDetail />} />
             </Route>
           </Route>
