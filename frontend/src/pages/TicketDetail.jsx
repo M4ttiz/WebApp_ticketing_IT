@@ -25,6 +25,12 @@ import {
   Clock,
   Lock,
   Trash2,
+  Search,
+  X,
+  Package,
+  Tag,
+  Building2,
+  Briefcase,
 } from 'lucide-react'
 
 const STATUS_FLOW = {
@@ -59,8 +65,11 @@ export default function TicketDetail() {
   const [statusModal, setStatusModal] = useState(null)
   const [agents, setAgents] = useState([])
   const [assigneeId, setAssigneeId] = useState('')
-  const [assets, setAssets] = useState([])
   const [assetId, setAssetId] = useState('')
+  const [assetSearch, setAssetSearch] = useState('')
+  const [assetResults, setAssetResults] = useState([])
+  const [assetSearchLoading, setAssetSearchLoading] = useState(false)
+  const [selectedAsset, setSelectedAsset] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const isAdmin = user?.role === 'admin'
@@ -71,9 +80,6 @@ export default function TicketDetail() {
     if (isAdmin) {
       api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
     }
-    getAssets({ limit: 100 }).then((r) => setAssets(r.data.items || [])).catch(() => {
-      toast.error('Errore nel caricamento asset disponibili')
-    })
   }, [id])
 
   async function loadTicket() {
@@ -86,12 +92,58 @@ export default function TicketDetail() {
       setTicket(tRes.data)
       setMessages(mRes.data)
       setAssigneeId(tRes.data.assigneeId || '')
-      setAssetId(tRes.data.assets?.[0]?.asset?.id || '')
+      const currentAsset = tRes.data.assets?.[0]?.asset || null
+      setAssetId(currentAsset?.id || '')
+      setSelectedAsset(currentAsset)
+      setAssetSearch(currentAsset?.name || '')
+      setAssetResults([])
     } catch (e) {
       toast.error('Errore nel caricamento del ticket')
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    if (!isAgent) return
+    const query = assetSearch.trim()
+    if (query.length < 2) {
+      setAssetResults([])
+      setAssetSearchLoading(false)
+      return
+    }
+
+    let active = true
+    setAssetSearchLoading(true)
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await getAssets({ search: query, page: 1, limit: 10 })
+        if (active) setAssetResults(res.data.items || [])
+      } catch (e) {
+        if (active) toast.error('Errore nella ricerca asset')
+      } finally {
+        if (active) setAssetSearchLoading(false)
+      }
+    }, 300)
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
+  }, [assetSearch, isAgent])
+
+  const handleSelectAsset = (asset) => {
+    setSelectedAsset(asset)
+    setAssetId(asset.id)
+    setAssetSearch(asset.name || '')
+    setAssetResults([])
+  }
+
+  const handleClearAsset = () => {
+    setSelectedAsset(null)
+    setAssetId('')
+    setAssetSearch('')
+    setAssetResults([])
   }
 
   async function sendComment() {
@@ -165,7 +217,6 @@ export default function TicketDetail() {
             <span>Richiedente: <strong className="text-slate-200">{ticket.requester?.firstName} {ticket.requester?.lastName}</strong></span>
             <span>Assegnato a: <strong className="text-slate-200">{ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : '—'}</strong></span>
             <span>Creato: <strong className="text-slate-200">{format(new Date(ticket.createdAt), 'dd MMM yyyy HH:mm', { locale: it })}</strong></span>
-            <span>Asset: <strong className="text-slate-200">{ticket.assets?.[0]?.asset?.name || '—'}</strong></span>
           </div>
         </div>
 
@@ -216,16 +267,56 @@ export default function TicketDetail() {
             )}
             <div>
               <span className="text-sm font-medium">Asset collegato:</span>
-              <select
-                value={assetId}
-                onChange={(e) => setAssetId(e.target.value)}
-                className={`${ui.select} mt-1`}
-              >
-                <option value="">Nessun asset</option>
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name} {a.assetTag ? `(${a.assetTag})` : ''}</option>
-                ))}
-              </select>
+              <div className="relative mt-1">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={assetSearch}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setAssetSearch(value)
+                    if (selectedAsset && value !== (selectedAsset.name || '')) {
+                      setSelectedAsset(null)
+                      setAssetId('')
+                    }
+                  }}
+                  placeholder="Cerca asset per nome/modello/sede..."
+                  className={`${ui.input} pl-9 pr-9`}
+                />
+                {(assetId || assetSearch) && (
+                  <button
+                    type="button"
+                    onClick={handleClearAsset}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/70"
+                    aria-label="Deseleziona asset"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+
+                {assetSearch.trim().length >= 2 && !selectedAsset && (
+                  <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 shadow-xl max-h-64 overflow-auto">
+                    {assetSearchLoading ? (
+                      <div className="px-3 py-2 text-sm text-slate-400">Ricerca in corso...</div>
+                    ) : assetResults.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-slate-500">Nessun asset trovato</div>
+                    ) : (
+                      assetResults.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => handleSelectAsset(a)}
+                          className="w-full text-left px-3 py-2 border-b border-slate-800 last:border-b-0 hover:bg-slate-800/70 transition-colors"
+                        >
+                          <div className="text-sm font-medium text-slate-100">{a.name || '-'}</div>
+                          <div className="text-xs text-slate-400">
+                            {[a.brand, a.model, a.location, a.assetTag].filter(Boolean).join(' · ') || 'Dettagli non disponibili'}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           {isAdmin && (
@@ -282,6 +373,34 @@ export default function TicketDetail() {
 
         {/* Timeline + Attachments */}
         <div className="space-y-4">
+          {ticket.assets?.[0]?.asset && (
+            <div className={ui.cardSection}>
+              <h3 className="font-semibold text-sm mb-4">Asset collegato</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-slate-200">
+                  <Package size={15} className="text-primary-400" />
+                  <span>{ticket.assets[0].asset.name || '-'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Tag size={15} className="text-primary-400" />
+                  <span>{ticket.assets[0].asset.brand || '-'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Tag size={15} className="text-primary-400" />
+                  <span>{ticket.assets[0].asset.model || '-'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Building2 size={15} className="text-primary-400" />
+                  <span>{ticket.assets[0].asset.location || '-'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Briefcase size={15} className="text-primary-400" />
+                  <span>{ticket.assets[0].asset.assignedTo || '-'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className={ui.cardSection}>
             <h3 className="font-semibold text-sm mb-4">Cronologia</h3>
             <TicketTimeline logs={ticket.auditLogs} />
