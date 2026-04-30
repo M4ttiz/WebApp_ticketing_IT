@@ -44,6 +44,12 @@ router.get(
   assetController.topOpenTicketsByProduct
 );
 
+// GET /api/assets/stats — Aggregated asset counts
+router.get(
+  '/stats',
+  assetController.getAssetStats
+);
+
 // GET /api/assets/:id — Get asset detail with linked tickets
 router.get(
   '/:id',

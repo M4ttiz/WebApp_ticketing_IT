@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Plus, Search, Server, FileSpreadsheet, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -28,6 +29,91 @@ const DEFAULT_CATEGORIES = [
   'SERVER', 'SWITCH', 'ROUTER', 'TELEFONO', 'TABLET', 'ALTRO',
 ]
 
+const CATEGORY_DASHBOARD_COLORS = {
+  AP: '#16a34a',
+  ACCESS_POINT: '#16a34a',
+  'PC CLIENTE': '#2563eb',
+  DESKTOP: '#2563eb',
+  LAPTOP: '#2563eb',
+  STAMPANTE: '#d97706',
+  MONITOR: '#0d9488',
+  SWITCH: '#7c3aed',
+  ROUTER: '#db2777',
+  NAS: '#4338ca',
+  SERVER: '#dc2626',
+  TELEFONO: '#0891b2',
+  ALTRO: '#6b7280',
+}
+
+const STATUS_DASHBOARD_COLORS = {
+  DISPONIBILE: '#16a34a',
+  IN_USO: '#2563eb',
+  IN_MANUTENZIONE: '#d97706',
+  DISMESSO: '#6b7280',
+  GUASTO: '#dc2626',
+}
+
+const CATEGORY_ICONS = {
+  AP: '📶',
+  ACCESS_POINT: '📶',
+  'PC CLIENTE': '🖥️',
+  DESKTOP: '🖥️',
+  LAPTOP: '💻',
+  STAMPANTE: '🖨️',
+  MONITOR: '🖥️',
+  SWITCH: '🔀',
+  ROUTER: '📡',
+  NAS: '💾',
+  SERVER: '🗄️',
+  TELEFONO: '📞',
+  ALTRO: '📦',
+}
+
+const STATUS_ICONS = {
+  DISPONIBILE: '✅',
+  IN_USO: '🔵',
+  IN_MANUTENZIONE: '🛠️',
+  DISMESSO: '📦',
+  GUASTO: '❌',
+}
+
+const DEFAULT_SEDE_COLOR = '#475569'
+
+function normalizeCategoryName(value) {
+  return (value || 'ALTRO').trim().toUpperCase()
+}
+
+function normalizeStatusName(value) {
+  return (value || 'DISPONIBILE').trim().toUpperCase()
+}
+
+function statusLabel(value) {
+  const normalized = normalizeStatusName(value)
+  if (normalized === 'IN_USO') return 'In uso'
+  if (normalized === 'IN_MANUTENZIONE') return 'In manutenzione'
+  if (normalized === 'DISMESSO') return 'Dismesso'
+  if (normalized === 'GUASTO') return 'Guasto'
+  return 'Disponibile'
+}
+
+function categoryLabel(value) {
+  const normalized = normalizeCategoryName(value)
+  if (normalized === 'ACCESS_POINT') return 'AP'
+  if (normalized === 'PC CLIENTE') return 'PC Cliente'
+  if (normalized === 'ALTRO') return 'Altro'
+  return normalized
+}
+
+function toCardStyle(hexColor, selected) {
+  return {
+    backgroundColor: hexColor,
+    borderColor: selected ? '#f8fafc' : 'rgba(255,255,255,0.25)',
+    borderWidth: selected ? '3px' : '1px',
+    boxShadow: selected ? '0 10px 30px rgba(0,0,0,0.35)' : '0 6px 20px rgba(0,0,0,0.20)',
+    filter: selected ? 'brightness(0.90)' : 'none',
+  }
+}
+
 export default function Inventory() {
   const { user } = useAuth()
   const [rawAssets, setRawAssets] = useState([])
@@ -43,6 +129,13 @@ export default function Inventory() {
   const [kpiStatusFilter, setKpiStatusFilter] = useState('OPEN')
   const [kpiMonth, setKpiMonth] = useState('')
   const [kpiYear, setKpiYear] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [statsData, setStatsData] = useState({
+    byCategory: [],
+    bySede: [],
+    byStatus: [],
+  })
   const [modalOpen, setModalOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
@@ -107,6 +200,23 @@ export default function Inventory() {
     }
   }
 
+  const fetchAssetStats = async () => {
+    setStatsLoading(true)
+    try {
+      const res = await api.get('/assets/stats')
+      setStatsData({
+        byCategory: res.data?.byCategory || [],
+        bySede: res.data?.bySede || [],
+        byStatus: res.data?.byStatus || [],
+      })
+    } catch (err) {
+      setStatsData({ byCategory: [], bySede: [], byStatus: [] })
+      toast.error('Errore nel caricamento statistiche inventario')
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchAssets()
   }, [debouncedSearch, categoryFilter])
@@ -116,12 +226,17 @@ export default function Inventory() {
   }, [debouncedSearch, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
 
   useEffect(() => {
+    fetchAssetStats()
+  }, [])
+
+  useEffect(() => {
     const intervalId = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
         return
       }
       fetchAssets()
       fetchTopKpi()
+      fetchAssetStats()
     }, 60000)
     return () => clearInterval(intervalId)
   }, [debouncedSearch, categoryFilter, locationFilter, departmentFilter, kpiLimit, kpiStatusFilter, kpiMonth, kpiYear])
@@ -151,15 +266,54 @@ export default function Inventory() {
   const filteredAssets = useMemo(() => {
     const locationNeedle = locationFilter.trim().toLowerCase()
     const departmentNeedle = departmentFilter.trim().toLowerCase()
+    const statusNeedle = statusFilter.trim().toUpperCase()
 
-    if (!locationNeedle && !departmentNeedle) return rawAssets
+    if (!locationNeedle && !departmentNeedle && !statusNeedle) return rawAssets
 
     return rawAssets.filter((item) => {
       const locationMatches = !locationNeedle || (item.location || '').toLowerCase().includes(locationNeedle)
       const departmentMatches = !departmentNeedle || (item.assignedTo || '').toLowerCase().includes(departmentNeedle)
-      return locationMatches && departmentMatches
+      const statusMatches = !statusNeedle || normalizeStatusName(item.status) === statusNeedle
+      return locationMatches && departmentMatches && statusMatches
     })
-  }, [rawAssets, locationFilter, departmentFilter])
+  }, [rawAssets, locationFilter, departmentFilter, statusFilter])
+
+  const categoryCards = useMemo(() => {
+    return (statsData.byCategory || []).map((item) => {
+      const normalizedCategory = normalizeCategoryName(item.category)
+      return {
+        key: normalizedCategory,
+        filterValue: item.category || 'ALTRO',
+        label: categoryLabel(item.category),
+        count: item.count || 0,
+        color: CATEGORY_DASHBOARD_COLORS[normalizedCategory] || CATEGORY_DASHBOARD_COLORS.ALTRO,
+        icon: CATEGORY_ICONS[normalizedCategory] || CATEGORY_ICONS.ALTRO,
+      }
+    })
+  }, [statsData])
+
+  const sedeCards = useMemo(() => {
+    return (statsData.bySede || []).map((item) => ({
+      key: item.sede || 'Sede non definita',
+      label: item.sede || 'Sede non definita',
+      count: item.count || 0,
+      color: DEFAULT_SEDE_COLOR,
+      icon: '🏢',
+    }))
+  }, [statsData])
+
+  const statusCards = useMemo(() => {
+    return (statsData.byStatus || []).map((item) => {
+      const normalizedStatus = normalizeStatusName(item.status)
+      return {
+        key: normalizedStatus,
+        label: statusLabel(item.status),
+        count: item.count || 0,
+        color: STATUS_DASHBOARD_COLORS[normalizedStatus] || '#6b7280',
+        icon: STATUS_ICONS[normalizedStatus] || 'ℹ️',
+      }
+    })
+  }, [statsData])
 
   const groupedAssets = useMemo(() => {
     const groups = {}
@@ -260,6 +414,105 @@ export default function Inventory() {
         </select>
         <input value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="Filtro sede..." className={ui.input} />
         <input value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} placeholder="Filtro reparto..." className={ui.input} />
+      </div>
+
+      <div className={`${ui.cardSection} p-4 space-y-4`}>
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Dashboard inventario per categoria</h2>
+          <p className="text-xs text-slate-400">Clicca una card per filtrare la tabella sottostante</p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {statsLoading ? (
+            <div className="col-span-full text-sm text-slate-400">Caricamento card categoria...</div>
+          ) : (
+            categoryCards.map((card, index) => {
+              const isSelected = categoryFilter !== 'Tutte' && normalizeCategoryName(categoryFilter) === card.key
+              return (
+                <motion.button
+                  key={card.key}
+                  type="button"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.2 }}
+                  whileHover={{ scale: 1.03 }}
+                  className="relative rounded-xl p-3 text-left text-white min-h-[100px] min-w-[140px] cursor-pointer transition-all"
+                  style={toCardStyle(card.color, isSelected)}
+                  onClick={() => setCategoryFilter(isSelected ? 'Tutte' : card.filterValue)}
+                >
+                  <span className="absolute top-2 right-3 text-xl opacity-90">{card.icon}</span>
+                  <div className="absolute bottom-3 left-3">
+                    <p className="text-[28px] leading-none font-bold">{card.count}</p>
+                    <p className="text-xs opacity-85">{card.label}</p>
+                  </div>
+                </motion.button>
+              )
+            })
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Per sede</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {statsLoading ? (
+            <div className="col-span-full text-sm text-slate-400">Caricamento card sedi...</div>
+          ) : (
+            sedeCards.map((card, index) => {
+              const isSelected = locationFilter.trim().toLowerCase() === card.label.trim().toLowerCase()
+              return (
+                <motion.button
+                  key={card.key}
+                  type="button"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.2 }}
+                  whileHover={{ scale: 1.03 }}
+                  className="relative rounded-xl p-3 text-left text-white min-h-[100px] min-w-[140px] cursor-pointer transition-all"
+                  style={toCardStyle(card.color, isSelected)}
+                  onClick={() => setLocationFilter(isSelected ? '' : card.label)}
+                >
+                  <span className="absolute top-2 right-3 text-xl opacity-90">{card.icon}</span>
+                  <div className="absolute bottom-3 left-3">
+                    <p className="text-[28px] leading-none font-bold">{card.count}</p>
+                    <p className="text-xs opacity-85">{card.label}</p>
+                  </div>
+                </motion.button>
+              )
+            })
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Per stato</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {statsLoading ? (
+            <div className="col-span-full text-sm text-slate-400">Caricamento card stati...</div>
+          ) : (
+            statusCards.map((card, index) => {
+              const isSelected = normalizeStatusName(statusFilter) === card.key
+              return (
+                <motion.button
+                  key={card.key}
+                  type="button"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.2 }}
+                  whileHover={{ scale: 1.03 }}
+                  className="relative rounded-xl p-3 text-left text-white min-h-[100px] min-w-[140px] cursor-pointer transition-all"
+                  style={toCardStyle(card.color, isSelected)}
+                  onClick={() => setStatusFilter(isSelected ? '' : card.key)}
+                >
+                  <span className="absolute top-2 right-3 text-xl opacity-90">{card.icon}</span>
+                  <div className="absolute bottom-3 left-3">
+                    <p className="text-[28px] leading-none font-bold">{card.count}</p>
+                    <p className="text-xs opacity-85">{card.label}</p>
+                  </div>
+                </motion.button>
+              )
+            })
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

@@ -176,6 +176,52 @@ async function topOpenTicketsByProduct(req, res, next) {
 }
 
 /**
+ * GET /api/assets/stats
+ * Conteggi aggregati per categoria, sede e stato
+ */
+async function getAssetStats(req, res, next) {
+  try {
+    const [byCategoryRaw, byLocationRaw, byStatusRaw] = await Promise.all([
+      prisma.asset.groupBy({
+        by: ['category'],
+        _count: { id: true },
+      }),
+      prisma.asset.groupBy({
+        by: ['location'],
+        _count: { id: true },
+      }),
+      prisma.asset.groupBy({
+        by: ['status'],
+        _count: { id: true },
+      }),
+    ]);
+
+    const byCategory = byCategoryRaw.map((item) => ({
+      category: item.category || 'Altro',
+      count: item._count.id,
+    }));
+
+    const bySede = byLocationRaw.map((item) => ({
+      sede: item.location || 'Sede non definita',
+      count: item._count.id,
+    }));
+
+    const byStatus = byStatusRaw.map((item) => ({
+      status: item.status || 'DISPONIBILE',
+      count: item._count.id,
+    }));
+
+    return res.json({
+      byCategory,
+      bySede,
+      byStatus,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/assets/:id — Dettaglio asset con ticket collegati
  */
 async function getAsset(req, res, next) {
@@ -399,6 +445,7 @@ async function unlinkTicket(req, res, next) {
 
 module.exports = {
   listAssets,
+  getAssetStats,
   getAsset,
   createAsset,
   updateAsset,
