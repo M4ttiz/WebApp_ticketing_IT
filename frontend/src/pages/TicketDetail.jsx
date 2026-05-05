@@ -195,6 +195,22 @@ export default function TicketDetail() {
     }
   }
 
+  async function openAttachment(att) {
+    try {
+      const res = await api.get(`/upload/${att.filename}`, { responseType: 'blob' })
+      const blobUrl = URL.createObjectURL(new Blob([res.data], { type: att.mimeType || 'application/octet-stream' }))
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = att.originalName || att.filename
+      link.target = '_blank'
+      link.rel = 'noreferrer'
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+    } catch (e) {
+      toast.error('Impossibile aprire allegato')
+    }
+  }
+
   if (loading || !ticket) {
     return (
       <div className="space-y-4">
@@ -420,15 +436,14 @@ export default function TicketDetail() {
               </h3>
               <div className="space-y-2">
                 {ticket.attachments.map((att) => (
-                  <a
+                  <button
                     key={att.id}
-                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/${att.filename}`}
-                    target="_blank"
-                    rel="noreferrer"
+                    type="button"
+                    onClick={() => openAttachment(att)}
                     className="flex items-center gap-2 text-sm text-primary-400 hover:text-primary-300 transition-colors"
                   >
                     <Paperclip size={14} /> {att.originalName}
-                  </a>
+                  </button>
                 ))}
               </div>
             </div>
