@@ -54,10 +54,11 @@ router.post(
   [
     body('firstName').trim().notEmpty().withMessage('Nome obbligatorio'),
     body('lastName').trim().notEmpty().withMessage('Cognome obbligatorio'),
-    body('email').isEmail().withMessage('Email non valida').normalizeEmail(),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Email non valida').normalizeEmail(),
+    body('username').optional({ nullable: true, checkFalsy: true }).trim().isLength({ min: 3, max: 50 }).withMessage('Username locale non valido'),
     body('role')
       .optional()
-      .isIn(['user', 'technician', 'admin']).withMessage('Ruolo non valido'),
+      .isIn(['user', 'viewer', 'technician', 'admin']).withMessage('Ruolo non valido'),
     body('department').optional().trim(),
   ],
   validate,
@@ -79,15 +80,15 @@ router.patch(
   requireRole(['admin']),
   [
     param('id').isUUID().withMessage('ID utente non valido'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
-    body('role').optional().isIn(['user', 'technician', 'admin']),
+    body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Email non valida'),
+    body('role').optional().isIn(['user', 'viewer', 'technician', 'admin']),
     body('isActive').optional().isBoolean(),
   ],
   validate,
   userController.updateUser
 );
 
-// DELETE /api/users/:id — Soft delete
+// DELETE /api/users/:id — Hard delete with constraints
 router.delete(
   '/:id',
   requireRole(['admin']),
@@ -100,7 +101,13 @@ router.delete(
 router.post(
   '/:id/reset-password',
   requireRole(['admin']),
-  [param('id').isUUID()],
+  [
+    param('id').isUUID(),
+    body('newPassword')
+      .optional({ nullable: true, checkFalsy: true })
+      .isLength({ min: 8 })
+      .withMessage('La nuova password deve avere almeno 8 caratteri'),
+  ],
   validate,
   userController.adminResetPassword
 );

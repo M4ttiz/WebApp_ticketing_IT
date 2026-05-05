@@ -17,9 +17,15 @@ const { UnauthorizedError, NotFoundError, AppError } = require('../utils/errors'
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
+    // #region agent log
+    fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H2',location:'auth.controller.js:21',message:'Login handler entered',data:{emailProvided:Boolean(email),passwordProvided:Boolean(password)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     // Find user
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    // #region agent log
+    fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H3',location:'auth.controller.js:26',message:'User lookup completed',data:{userFound:Boolean(user),isDeleted:user?.isDeleted??null,isActive:user?.isActive??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!user || user.isDeleted) {
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
@@ -41,10 +47,10 @@ async function login(req, res, next) {
     // Set refresh token as httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/api/auth',
+      path: '/api/auth/refresh',
     });
 
     res.json({
@@ -52,6 +58,9 @@ async function login(req, res, next) {
       user: sanitizeUser(user),
     });
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H4',location:'auth.controller.js:61',message:'Login handler exception',data:{name:error?.name||null,code:error?.code||null,message:error?.message||null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     next(error);
   }
 }
@@ -77,7 +86,12 @@ async function refresh(req, res, next) {
       if (storedToken) {
         await prisma.refreshToken.delete({ where: { id: storedToken.id } });
       }
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
+        path: '/api/auth/refresh',
+      });
       return res.status(401).json({ error: 'Sessione scaduta, effettua di nuovo il login', code: 'REFRESH_EXPIRED' });
     }
 
@@ -93,10 +107,10 @@ async function refresh(req, res, next) {
 
     res.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth',
+      path: '/api/auth/refresh',
     });
 
     res.json({
@@ -117,7 +131,12 @@ async function logout(req, res, next) {
     if (token) {
       await prisma.refreshToken.deleteMany({ where: { token } });
     }
-    res.clearCookie('refreshToken', { path: '/api/auth' });
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/api/auth/refresh',
+    });
     res.json({ message: 'Logout effettuato' });
   } catch (error) {
     next(error);

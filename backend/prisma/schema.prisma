@@ -15,23 +15,25 @@ datasource db {
 
 enum Role {
   user
+  viewer
   technician
   admin
 }
 
 enum Priority {
-  low
-  medium
-  high
-  urgent
+  BASSA
+  MEDIA
+  ALTA
+  CRITICA
 }
 
 enum TicketStatus {
-  open
-  in_progress
-  on_hold
-  resolved
-  closed
+  APERTO
+  IN_LAVORAZIONE
+  IN_ATTESA
+  RISOLTO
+  CHIUSO
+  RIFIUTATO
 }
 
 // ─── Models ────────────────────────────────
@@ -57,6 +59,9 @@ model User {
   history          TicketHistory[]
   attachments      Attachment[]
   refreshTokens    RefreshToken[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  assets           Asset[]
 
   @@map("users")
 }
@@ -79,8 +84,8 @@ model Ticket {
   title        String       @db.VarChar(255)
   description  String       @db.Text
   categoryId   Int          @map("category_id")
-  priority     Priority     @default(medium)
-  status       TicketStatus @default(open)
+  priority     Priority     @default(MEDIA)
+  status       TicketStatus @default(APERTO)
   requesterId  String       @map("requester_id")
   assigneeId   String?      @map("assignee_id")
   createdAt    DateTime     @default(now()) @map("created_at")
@@ -94,6 +99,8 @@ model Ticket {
   messages    TicketMessage[]
   history     TicketHistory[]
   attachments Attachment[]
+  auditLogs   AuditLog[]
+  assets      TicketAsset[]
 
   @@index([status])
   @@index([priority])
@@ -104,11 +111,12 @@ model Ticket {
 }
 
 model TicketMessage {
-  id        Int      @id @default(autoincrement())
-  ticketId  Int      @map("ticket_id")
-  authorId  String   @map("author_id")
-  content   String   @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id         Int      @id @default(autoincrement())
+  ticketId   Int      @map("ticket_id")
+  authorId   String   @map("author_id")
+  content    String   @db.Text
+  isInternal Boolean  @default(false) @map("is_internal")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   // Relations
   ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -178,4 +186,110 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int      @map("ticket_id")
+  userId    String   @map("user_id")
+  action    String   @db.VarChar(255)
+  oldValue  String?  @map("old_value") @db.Text
+  newValue  String?  @map("new_value") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  ticketId  Int?     @map("ticket_id")
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// ─── Asset Inventory ──────────────────────────────────────────────────
+
+enum AssetCategory {
+  LAPTOP
+  DESKTOP
+  MONITOR
+  STAMPANTE
+  ACCESS_POINT
+  SERVER
+  SWITCH
+  ROUTER
+  TELEFONO
+  TABLET
+  ALTRO
+}
+
+enum AssetStatus {
+  DISPONIBILE
+  IN_USO
+  IN_MANUTENZIONE
+  DISMESSO
+  GUASTO
+}
+
+model Asset {
+  id             String        @id @default(uuid())
+  name           String        @db.VarChar(255)
+  category       String        @db.VarChar(100)
+  brand          String?       @db.VarChar(100)
+  model          String?       @db.VarChar(100)
+  serialNumber   String?       @unique @map("serial_number") @db.VarChar(100)
+  assetTag       String?       @unique @map("asset_tag") @db.VarChar(100)
+  status         AssetStatus   @default(DISPONIBILE)
+  location       String?       @db.VarChar(200)
+  assignedTo     String?       @map("assigned_to") @db.VarChar(200)
+  assignedUserId String?       @map("assigned_user_id") @db.VarChar(36)
+  purchaseDate   DateTime?     @map("purchase_date")
+  warrantyExpiry DateTime?     @map("warranty_expiry")
+  notes          String?       @db.Text
+  ipAddress      String?       @map("ip_address") @db.VarChar(45)
+  macAddress     String?       @map("mac_address") @db.VarChar(17)
+  osVersion      String?       @map("os_version") @db.VarChar(100)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  assignedUser User?         @relation(fields: [assignedUserId], references: [id])
+  tickets      TicketAsset[]
+
+  @@index([category])
+  @@index([status])
+  @@index([assignedUserId])
+  @@map("assets")
+}
+
+model TicketAsset {
+  id        String   @id @default(uuid())
+  ticketId  Int      @map("ticket_id")
+  assetId   String   @map("asset_id") @db.VarChar(36)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  asset  Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, assetId])
+  @@index([ticketId])
+  @@index([assetId])
+  @@map("ticket_assets")
 }

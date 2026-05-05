@@ -9,6 +9,25 @@ const { sendEmail } = require('../services/email.service');
 const emailTemplates = require('../utils/emailTemplates');
 const { NotFoundError, ForbiddenError, AppError } = require('../utils/errors');
 
+async function ensureViewerRoleExists() {
+  await prisma.$executeRawUnsafe(`
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'Role'
+  ) THEN
+    BEGIN
+      ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'viewer';
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END;
+  END IF;
+END $$;
+  `);
+}
+
 
 const userSelect = {
   id: true,
@@ -80,10 +99,34 @@ async function listUsers(req, res, next) {
  */
 async function createUser(req, res, next) {
   try {
-    const { firstName, lastName, email, role = 'user', department } = req.body;
+    const { firstName, lastName, email, username, role = 'user', department } = req.body;
+    if (role === 'viewer') {
+      await ensureViewerRoleExists();
+    }
+    const normalizedEmail = email?.toLowerCase().trim();
+    const normalizeLocalUsername = (value) => String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]/g, '');
+    const baseLocalUsername = normalizeLocalUsername(
+      username?.trim() || `${firstName}${lastName}`
+    ).slice(0, 40) || 'localuser';
+    let resolvedEmail = normalizedEmail;
+
+    // For local users (without email), generate short editable username (no domain suffix).
+    if (!resolvedEmail) {
+      let candidate = baseLocalUsername;
+      let suffix = 1;
+      while (await prisma.user.findUnique({ where: { email: candidate } })) {
+        candidate = `${baseLocalUsername}${suffix}`;
+        suffix += 1;
+      }
+      resolvedEmail = candidate;
+    }
 
     // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const existing = await prisma.user.findUnique({ where: { email: resolvedEmail } });
     if (existing) {
       throw new AppError('Questa email è già registrata', 409);
     }
@@ -96,7 +139,7 @@ async function createUser(req, res, next) {
       data: {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email: email.toLowerCase().trim(),
+        email: resolvedEmail,
         passwordHash,
         role,
         department: department?.trim() || null,
@@ -105,22 +148,26 @@ async function createUser(req, res, next) {
       select: userSelect,
     });
 
-    // Send welcome email with temp password
-    try {
-      sendEmail({
-        to: user.email,
-        subject: '👋 Benvenuto in IT Ticketing — Il tuo account',
-        html: emailTemplates.accountCreated(
-          { firstName: user.firstName, email: user.email, role: user.role },
-          tempPassword,
-          process.env.APP_URL
-        ),
-      });
-    } catch (e) {
-      console.error('Failed to send welcome email:', e.message);
+    let emailSent = false;
+    // Send welcome email only for real email/domain accounts.
+    if (normalizedEmail) {
+      try {
+        const result = await sendEmail({
+          to: user.email,
+          subject: '👋 Benvenuto in IT Ticketing — Il tuo account',
+          html: emailTemplates.accountCreated(
+            { firstName: user.firstName, email: user.email, role: user.role },
+            tempPassword,
+            process.env.APP_URL
+          ),
+        });
+        emailSent = Boolean(result);
+      } catch (e) {
+        console.error('Failed to send welcome email:', e.message);
+      }
     }
 
-    res.status(201).json({ user });
+    res.status(201).json({ user, tempPassword, localAccount: !normalizedEmail, emailSent });
   } catch (error) {
     next(error);
   }
@@ -154,6 +201,9 @@ async function updateUser(req, res, next) {
   try {
     const { firstName, lastName, email, role, department, isActive } = req.body;
     const targetId = req.params.id;
+    if (role === 'viewer') {
+      await ensureViewerRoleExists();
+    }
 
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     if (!target || target.isDeleted) {
@@ -194,7 +244,7 @@ async function updateUser(req, res, next) {
 
 /**
  * DELETE /api/users/:id
- * Soft delete (admin only).
+ * Hard delete when no requester tickets exist (admin only).
  */
 async function deleteUser(req, res, next) {
   try {
@@ -209,15 +259,30 @@ async function deleteUser(req, res, next) {
       throw new NotFoundError('Utente');
     }
 
-    await prisma.user.update({
-      where: { id: targetId },
-      data: { isDeleted: true, isActive: false },
-    });
+    await prisma.$transaction([
+      prisma.ticket.updateMany({
+        where: { assigneeId: targetId },
+        data: { assigneeId: null },
+      }),
+      // Delete tickets created by / assigned to this user so foreign keys don't block user deletion.
+      prisma.ticket.deleteMany({
+        where: {
+          OR: [
+            { requesterId: targetId },
+            { assigneeId: targetId },
+          ],
+        },
+      }),
+      prisma.refreshToken.deleteMany({ where: { userId: targetId } }),
+      prisma.notification.deleteMany({ where: { userId: targetId } }),
+      prisma.auditLog.deleteMany({ where: { userId: targetId } }),
+      prisma.ticketHistory.deleteMany({ where: { userId: targetId } }),
+      prisma.attachment.deleteMany({ where: { uploaderId: targetId } }),
+      prisma.ticketMessage.deleteMany({ where: { authorId: targetId } }),
+      prisma.user.delete({ where: { id: targetId } }),
+    ]);
 
-    // Invalidate all refresh tokens
-    await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
-
-    res.json({ message: 'Utente eliminato' });
+    res.json({ message: 'Utente cancellato definitivamente' });
   } catch (error) {
     next(error);
   }
@@ -230,13 +295,22 @@ async function deleteUser(req, res, next) {
 async function adminResetPassword(req, res, next) {
   try {
     const targetId = req.params.id;
+    const { newPassword } = req.body;
     const user = await prisma.user.findUnique({ where: { id: targetId } });
     if (!user || user.isDeleted) {
       throw new NotFoundError('Utente');
     }
 
-    // Generate temporary password
-    const tempPassword = crypto.randomBytes(6).toString('base64url').slice(0, 12);
+    const isDomainAccount = String(user.email || '').includes('@');
+
+    // Domain account: generated temporary password + email.
+    // Local account: admin provides password manually.
+    const tempPassword = isDomainAccount
+      ? crypto.randomBytes(6).toString('base64url').slice(0, 12)
+      : String(newPassword || '');
+    if (!isDomainAccount && tempPassword.length < 8) {
+      throw new AppError('Per utenti locali inserisci una password di almeno 8 caratteri', 400);
+    }
     const passwordHash = await bcrypt.hash(tempPassword, 12);
 
     await prisma.user.update({
@@ -247,22 +321,30 @@ async function adminResetPassword(req, res, next) {
     // Invalidate refresh tokens
     await prisma.refreshToken.deleteMany({ where: { userId: targetId } });
 
-    // Send email with new temp password
-    try {
-      sendEmail({
-        to: user.email,
-        subject: '🔑 Password reimpostata — IT Ticketing',
-        html: emailTemplates.adminPasswordReset(
-          `${user.firstName} ${user.lastName}`,
-          tempPassword,
-          process.env.APP_URL
-        ),
-      });
-    } catch (e) {
-      console.error('Failed to send password reset email:', e.message);
+    let emailSent = false;
+    if (isDomainAccount) {
+      try {
+        const result = await sendEmail({
+          to: user.email,
+          subject: '🔑 Password reimpostata — IT Ticketing',
+          html: emailTemplates.adminPasswordReset(
+            `${user.firstName} ${user.lastName}`,
+            tempPassword,
+            process.env.APP_URL
+          ),
+        });
+        emailSent = Boolean(result);
+      } catch (e) {
+        console.error('Failed to send password reset email:', e.message);
+      }
     }
 
-    res.json({ message: 'Password reimpostata' });
+    res.json({
+      message: 'Password reimpostata',
+      tempPassword: isDomainAccount ? tempPassword : null,
+      localAccount: !isDomainAccount,
+      emailSent,
+    });
   } catch (error) {
     next(error);
   }
@@ -322,15 +404,24 @@ async function getProfile(req, res, next) {
 
 /**
  * PATCH /api/users/me
- * Update own profile (limited fields).
+ * Update own profile (limited fields + safe email change).
  */
 async function updateProfile(req, res, next) {
   try {
-    const { firstName, lastName, department } = req.body;
+    const { firstName, lastName, email, department } = req.body;
     const updateData = {};
     if (firstName !== undefined) updateData.firstName = firstName.trim();
     if (lastName !== undefined) updateData.lastName = lastName.trim();
     if (department !== undefined) updateData.department = department?.trim() || null;
+
+    if (email !== undefined) {
+      const emailLower = email.toLowerCase().trim();
+      const existing = await prisma.user.findUnique({ where: { email: emailLower } });
+      if (existing && existing.id !== req.user.id) {
+        throw new AppError('Email già in uso', 409);
+      }
+      updateData.email = emailLower;
+    }
 
     const user = await prisma.user.update({
       where: { id: req.user.id },

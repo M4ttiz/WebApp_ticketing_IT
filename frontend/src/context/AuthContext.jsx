@@ -5,7 +5,7 @@ const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   useEffect(() => {
     // Try refresh on mount
@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
         setUser(null)
         setAccessToken(null)
       } finally {
-        setLoading(false)
+        setIsInitializing(false)
       }
     }
     init()
@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
     window.location.href = '/login'
   }
 
-  return <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, setUser, login, logout, isInitializing }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)

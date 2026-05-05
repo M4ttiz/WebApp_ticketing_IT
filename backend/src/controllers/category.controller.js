@@ -95,13 +95,12 @@ async function deleteCategory(req, res, next) {
     });
     if (!existing) throw new NotFoundError('Categoria');
 
-    // Deactivate instead of delete (preserves ticket references)
-    await prisma.category.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    // Hard delete: delete tickets referencing this category first.
+    await prisma.ticket.deleteMany({ where: { categoryId: id } });
 
-    res.json({ message: 'Categoria disattivata' });
+    await prisma.category.delete({ where: { id } });
+
+    res.json({ message: 'Categoria eliminata' });
   } catch (error) {
     next(error);
   }
