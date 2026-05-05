@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { getTopOpenTicketsByProduct } from '../api/assets'
@@ -52,14 +52,43 @@ export default function AssetTicketsDashboard() {
 
   const chartColors = ['#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b']
 
+  const handleExportCsv = () => {
+    const headers = ['ASSET', 'CATEGORIA', 'SEDE', 'REPARTO', 'TICKET_APERTI']
+    const rows = items.map((item) => ([
+      item.descrizione || item.name || '-',
+      item.categoria || item.category || '-',
+      item.sede || item.location || '-',
+      item.reparto || item.department || '-',
+      item.openTickets || 0,
+    ].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(';')))
+    const csv = [headers.join(';'), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'ticket_per_asset_filtrato.csv'
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
   return (
     <div className={ui.page}>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-          <BarChart3 size={24} className="text-primary-400" />
-          Ticket per Asset
-        </h1>
-        <p className={ui.subtleText}>Classifica asset con ticket in base ai filtri selezionati</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <BarChart3 size={24} className="text-primary-400" />
+            Ticket per Asset
+          </h1>
+          <p className={ui.subtleText}>Classifica asset con ticket in base ai filtri selezionati</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          disabled={loading || items.length === 0}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+        >
+          <FileDown size={16} />
+          Export CSV
+        </button>
       </div>
 
       <div className={`${ui.cardSection} p-4 flex flex-col sm:flex-row sm:items-center gap-3`}>

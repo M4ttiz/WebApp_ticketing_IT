@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plus, Server } from 'lucide-react'
+import { Plus, Server, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { getAssets } from '../api/assets'
 import AssetModal from '../components/AssetModal'
@@ -74,6 +74,10 @@ function buildCategoryDetail(assets, selectedCategory) {
       }))
       .sort((a, b) => a.name.localeCompare(b.name, 'it')),
   }
+}
+
+function csvEscape(value) {
+  return `"${String(value ?? '').replaceAll('"', '""')}"`
 }
 
 export default function InventoryV2() {
@@ -188,6 +192,29 @@ export default function InventoryV2() {
     setModalOpen(true)
   }
 
+  const visibleRows = showTable ? pagedItems : filteredAssets
+
+  const handleExportCsv = () => {
+    const headers = ['NOME', 'MARCA', 'MODELLO', 'CATEGORIA', 'SEDE', 'REPARTO', 'ASSET_TAG', 'SERIALE']
+    const rows = visibleRows.map((asset) => ([
+      asset.name || '',
+      asset.brand || '',
+      asset.model || '',
+      normalizeText(asset.category, 'ALTRO'),
+      normalizeText(asset.location, 'Sede non definita'),
+      extractDepartment(asset),
+      asset.assetTag || '',
+      asset.serialNumber || '',
+    ].map(csvEscape).join(';')))
+    const csv = [headers.join(';'), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'inventario_filtrato.csv'
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -199,10 +226,20 @@ export default function InventoryV2() {
           <p className={ui.subtleText}>Vista semplificata categorie, sedi e reparti</p>
         </div>
         {canEdit && (
-          <button type="button" onClick={handleNewAsset} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-white transition-colors">
-            <Plus size={16} />
-            Nuovo Asset
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+            >
+              <FileDown size={16} />
+              Export CSV
+            </button>
+            <button type="button" onClick={handleNewAsset} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-white transition-colors">
+              <Plus size={16} />
+              Nuovo Asset
+            </button>
+          </div>
         )}
       </div>
 
