@@ -422,7 +422,7 @@ export default function TicketDetail() {
                 {ticket.attachments.map((att) => (
                   <a
                     key={att.id}
-                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/uploads/${att.filename}`}
+                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/${att.filename}`}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center gap-2 text-sm text-primary-400 hover:text-primary-300 transition-colors"

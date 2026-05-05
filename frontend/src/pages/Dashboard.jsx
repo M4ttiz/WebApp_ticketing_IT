@@ -5,7 +5,7 @@ import KpiCard from '../components/KpiCard'
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
 import StatusBadge from '../components/StatusBadge'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { Inbox, Clock, CheckCircle2, Timer, BarChart3, TrendingUp, FileDown } from 'lucide-react'
+import { Inbox, Clock, CheckCircle2, Timer, BarChart3, TrendingUp } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../context/AuthContext'
@@ -50,58 +50,13 @@ export default function Dashboard() {
   const recentTickets = data?.recentTickets || []
   const topAgents = data?.topAgents || []
 
-  const handleExportCsv = () => {
-    const escape = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
-    const lines = []
-
-    lines.push('SEZIONE;CAMPO;VALORE')
-    lines.push(['KPI', 'Ticket aperti', kpi.totalOpen ?? 0].map(escape).join(';'))
-    lines.push(['KPI', 'In lavorazione', kpi.inProgress ?? 0].map(escape).join(';'))
-    lines.push(['KPI', 'Risolti oggi', kpi.resolvedToday ?? 0].map(escape).join(';'))
-    lines.push(['KPI', 'Tempo medio (h)', kpi.avgResolutionHours ?? 0].map(escape).join(';'))
-
-    lines.push('')
-    lines.push('TICKET_RECENTI;NUMERO;TITOLO;STATO;CATEGORIA')
-    recentTickets.forEach((t) => {
-      lines.push([
-        'TICKET_RECENTI',
-        t.ticketNumber || '',
-        t.title || '',
-        t.status || '',
-        t.category?.name || '',
-      ].map(escape).join(';'))
-    })
-
-    lines.push('')
-    lines.push('TOP_AGENTI;NOME;RISOLTI')
-    topAgents.forEach((agent) => {
-      lines.push(['TOP_AGENTI', agent.name || '', agent.resolved ?? 0].map(escape).join(';'))
-    })
-
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = 'dashboard_filtrato.csv'
-    link.click()
-    URL.revokeObjectURL(link.href)
-  }
-
   return (
     <div className={ui.page}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className={ui.subtleText}>Panoramica ticket e performance operative</p>
         </div>
-        <button
-          type="button"
-          onClick={handleExportCsv}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
-        >
-          <FileDown size={16} />
-          Export CSV
-        </button>
       </div>
 
       {/* KPI Cards */}
