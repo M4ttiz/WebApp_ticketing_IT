@@ -39,15 +39,18 @@ async function listAssets(req, res, next) {
     const limit = Math.max(1, Math.min(1000, parseInt(req.query.limit, 10) || 20));
     const skip = (page - 1) * limit;
 
-    const { category, status, search } = req.query;
+    const { category, status, location, department, search } = req.query;
 
     const where = {};
     if (category) where.category = category;
     if (status) where.status = status;
+    if (location) where.location = location;
+    if (department) where.assignedTo = department;
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { serialNumber: { contains: search, mode: 'insensitive' } },
+        { model: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
         { assetTag: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -181,13 +184,17 @@ async function topOpenTicketsByProduct(req, res, next) {
  */
 async function getAssetStats(req, res, next) {
   try {
-    const [rawByCategory, rawBySede, rawByStatus] = await Promise.all([
+    const [rawByCategory, rawBySede, rawByDepartment, rawByStatus] = await Promise.all([
       prisma.asset.groupBy({
         by: ['category'],
         _count: { id: true },
       }),
       prisma.asset.groupBy({
         by: ['location'],
+        _count: { id: true },
+      }),
+      prisma.asset.groupBy({
+        by: ['assignedTo'],
         _count: { id: true },
       }),
       prisma.asset.groupBy({
@@ -220,6 +227,16 @@ async function getAssetStats(req, res, next) {
       .map((item) => ({ sede: item.sede.charAt(0).toUpperCase() + item.sede.slice(1), count: item.count }))
       .sort((a, b) => b.count - a.count);
 
+    const byDepartment = rawByDepartment
+      .map((item) => ({ department: String(item.assignedTo || 'Non assegnato').trim(), count: item._count.id }))
+      .reduce((acc, curr) => {
+        const existing = acc.find((item) => item.department === curr.department);
+        if (existing) existing.count += curr.count;
+        else acc.push({ ...curr });
+        return acc;
+      }, [])
+      .sort((a, b) => b.count - a.count);
+
     const byStatus = rawByStatus
       .map((item) => ({
         status: String(item.status || 'DISPONIBILE').trim().toUpperCase(),
@@ -236,6 +253,7 @@ async function getAssetStats(req, res, next) {
     return res.json({
       byCategory,
       bySede,
+      byDepartment,
       byStatus,
     });
   } catch (err) {

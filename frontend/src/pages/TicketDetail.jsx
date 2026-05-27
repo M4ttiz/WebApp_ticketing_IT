@@ -8,7 +8,7 @@ import CommentThread from '../components/CommentThread'
 import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
-import { getAssets, getAsset } from '../api/assets'
+import { getAssets, getAsset, getAssetStats } from '../api/assets'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ui } from '../lib/utils'
@@ -69,6 +69,10 @@ export default function TicketDetail() {
   const [assetSearch, setAssetSearch] = useState('')
   const [assetResults, setAssetResults] = useState([])
   const [assetSearchLoading, setAssetSearchLoading] = useState(false)
+  const [assetLocationFilter, setAssetLocationFilter] = useState('')
+  const [assetDepartmentFilter, setAssetDepartmentFilter] = useState('')
+  const [assetCategoryFilter, setAssetCategoryFilter] = useState('')
+  const [assetFilterOptions, setAssetFilterOptions] = useState({ categories: [], locations: [], departments: [] })
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -113,10 +117,33 @@ export default function TicketDetail() {
     }
   }
 
+  async function loadAssetFilters() {
+    try {
+      const res = await getAssetStats()
+      setAssetFilterOptions({
+        categories: Array.isArray(res.data.byCategory) ? res.data.byCategory.map((item) => item.category) : [],
+        locations: Array.isArray(res.data.bySede) ? res.data.bySede.map((item) => item.sede) : [],
+        departments: Array.isArray(res.data.byDepartment) ? res.data.byDepartment.map((item) => item.department) : [],
+      })
+    } catch (e) {
+      toast.error('Errore nel caricamento dei filtri asset')
+    }
+  }
+
+  useEffect(() => {
+    loadTicket()
+    loadAssetFilters()
+    if (isAdmin) {
+      api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
+    }
+  }, [id])
+
   useEffect(() => {
     if (!isAgent) return
     const query = assetSearch.trim()
-    if (query.length < 2) {
+    const shouldSearch = query.length >= 2 || assetLocationFilter || assetDepartmentFilter || assetCategoryFilter
+
+    if (!shouldSearch) {
       setAssetResults([])
       setAssetSearchLoading(false)
       return
@@ -126,7 +153,14 @@ export default function TicketDetail() {
     setAssetSearchLoading(true)
     const timeoutId = setTimeout(async () => {
       try {
-        const res = await getAssets({ search: query, page: 1, limit: 10 })
+        const res = await getAssets({
+          search: query || undefined,
+          category: assetCategoryFilter || undefined,
+          location: assetLocationFilter || undefined,
+          department: assetDepartmentFilter || undefined,
+          page: 1,
+          limit: 10,
+        })
         if (active) setAssetResults(res.data.items || [])
       } catch (e) {
         if (active) toast.error('Errore nella ricerca asset')
@@ -139,7 +173,13 @@ export default function TicketDetail() {
       active = false
       clearTimeout(timeoutId)
     }
-  }, [assetSearch, isAgent])
+  }, [assetSearch, assetLocationFilter, assetDepartmentFilter, assetCategoryFilter, isAgent])
+
+  const resetAssetFilters = () => {
+    setAssetLocationFilter('')
+    setAssetDepartmentFilter('')
+    setAssetCategoryFilter('')
+  }
 
   const handleSelectAsset = (asset) => {
     setSelectedAsset(asset)
@@ -276,26 +316,67 @@ export default function TicketDetail() {
       {isAgent && (
         <div className={`${ui.cardSection} flex flex-col items-start gap-3`}>
           <UserCheck size={18} className="text-primary-400 shrink-0" />
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {isAdmin && (
+          <div className="w-full space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+              {isAdmin && (
+                <div>
+                  <span className="text-sm font-medium">Assegna a:</span>
+                  <select
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                    className={`${ui.select} mt-1`}
+                  >
+                    <option value="">Non assegnato</option>
+                    {agents.map((a) => (
+                      <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
-                <span className="text-sm font-medium">Assegna a:</span>
+                <span className="text-sm font-medium">Filtro sede</span>
                 <select
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value)}
+                  value={assetLocationFilter}
+                  onChange={(e) => setAssetLocationFilter(e.target.value)}
                   className={`${ui.select} mt-1`}
                 >
-                  <option value="">Non assegnato</option>
-                  {agents.map((a) => (
-                    <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
+                  <option value="">Tutte le sedi</option>
+                  {assetFilterOptions.locations.map((location) => (
+                    <option key={location} value={location}>{location}</option>
                   ))}
                 </select>
               </div>
-            )}
-            <div>
-              <span className="text-sm font-medium">Asset collegato:</span>
-              <div className="relative mt-1">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <div>
+                <span className="text-sm font-medium">Filtro reparto</span>
+                <select
+                  value={assetDepartmentFilter}
+                  onChange={(e) => setAssetDepartmentFilter(e.target.value)}
+                  className={`${ui.select} mt-1`}
+                >
+                  <option value="">Tutti i reparti</option>
+                  {assetFilterOptions.departments.map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <span className="text-sm font-medium">Filtro categoria asset</span>
+                <select
+                  value={assetCategoryFilter}
+                  onChange={(e) => setAssetCategoryFilter(e.target.value)}
+                  className={`${ui.select} mt-1`}
+                >
+                  <option value="">Tutte le categorie</option>
+                  {assetFilterOptions.categories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="relative flex-1">
+                <span className="text-sm font-medium">Asset collegato:</span>
+                <Search size={16} className="absolute left-3 top-[42px] text-slate-400" />
                 <input
                   value={assetSearch}
                   onChange={(e) => {
@@ -307,20 +388,20 @@ export default function TicketDetail() {
                     }
                   }}
                   placeholder="Cerca asset per nome/modello/sede..."
-                  className={`${ui.input} pl-9 pr-9`}
+                  className={`${ui.input} pl-9 pr-9 mt-1 w-full`}
                 />
                 {(assetId || assetSearch) && (
                   <button
                     type="button"
                     onClick={handleClearAsset}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/70"
+                    className="absolute right-2 top-[49px] p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700/70"
                     aria-label="Deseleziona asset"
                   >
                     <X size={14} />
                   </button>
                 )}
 
-                {assetSearch.trim().length >= 2 && !selectedAsset && (
+                {(assetSearch.trim().length >= 2 || assetLocationFilter || assetDepartmentFilter || assetCategoryFilter) && !selectedAsset && (
                   <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 shadow-xl max-h-64 overflow-auto">
                     {assetSearchLoading ? (
                       <div className="px-3 py-2 text-sm text-slate-400">Ricerca in corso...</div>
@@ -344,6 +425,13 @@ export default function TicketDetail() {
                   </div>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={resetAssetFilters}
+                className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700 transition-colors"
+              >
+                Reset filtri
+              </button>
             </div>
           </div>
           {isAdmin && (

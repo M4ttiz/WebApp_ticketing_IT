@@ -8,6 +8,10 @@ export const getAsset = (id) => {
   return api.get(`/assets/${id}`)
 }
 
+export const getAssetStats = () => {
+  return api.get('/assets/stats')
+}
+
 export const createAsset = (data) => {
   return api.post('/assets', data)
 }
