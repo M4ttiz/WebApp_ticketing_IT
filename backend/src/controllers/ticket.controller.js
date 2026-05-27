@@ -714,8 +714,13 @@ async function getHistory(req, res, next) {
       throw new ForbiddenError();
     }
 
+    const historyWhere = { ticketId };
+    if (req.user.role === 'user') {
+      historyWhere.action = { not: 'Commento interno aggiunto' };
+    }
+
     const history = await prisma.ticketHistory.findMany({
-      where: { ticketId },
+      where: historyWhere,
       include: {
         user: { select: { id: true, firstName: true, lastName: true, role: true } },
       },
