@@ -45,7 +45,7 @@ async function listAssets(req, res, next) {
     if (category) where.category = { equals: category, mode: 'insensitive' };
     if (status) where.status = status;
     if (location) where.location = { contains: location, mode: 'insensitive' };
-    if (department) where.assignedTo = { contains: department, mode: 'insensitive' };
+    if (department) where.assignedTo = { equals: department, mode: 'insensitive' };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -95,7 +95,7 @@ async function topOpenTicketsByProduct(req, res, next) {
     const where = {};
     if (category) where.category = category;
     if (location) where.location = { contains: location, mode: 'insensitive' };
-    if (department) where.assignedTo = { contains: department, mode: 'insensitive' };
+    if (department) where.assignedTo = { equals: department, mode: 'insensitive' };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
