@@ -533,6 +533,7 @@ async function unlinkTicket(req, res, next) {
 module.exports = {
   listAssets,
   getAssetStats,
+  getAssetOptions,
   getAsset,
   createAsset,
   updateAsset,
