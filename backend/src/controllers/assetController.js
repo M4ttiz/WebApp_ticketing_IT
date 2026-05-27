@@ -42,10 +42,10 @@ async function listAssets(req, res, next) {
     const { category, status, location, department, search } = req.query;
 
     const where = {};
-    if (category) where.category = category;
+    if (category) where.category = { equals: category, mode: 'insensitive' };
     if (status) where.status = status;
-    if (location) where.location = location;
-    if (department) where.assignedTo = department;
+    if (location) where.location = { contains: location, mode: 'insensitive' };
+    if (department) where.assignedTo = { contains: department, mode: 'insensitive' };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -205,7 +205,7 @@ async function getAssetStats(req, res, next) {
 
     const byCategory = rawByCategory
       .map((item) => ({
-        category: String(item.category || 'Altro').trim().toUpperCase(),
+        category: String(item.category || 'Altro').trim(),
         count: item._count.id,
       }))
       .reduce((acc, curr) => {
