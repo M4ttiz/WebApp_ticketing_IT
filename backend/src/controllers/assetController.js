@@ -262,6 +262,53 @@ async function getAssetStats(req, res, next) {
 }
 
 /**
+ * GET /api/assets/options
+ * Returns lists of locations, categories and departments.
+ * Optional query params: location, category to scope departments.
+ */
+async function getAssetOptions(req, res, next) {
+  try {
+    const { location, category } = req.query;
+
+    // base where for scoping departments
+    const where = {};
+    if (location) where.location = { contains: location, mode: 'insensitive' };
+    if (category) where.category = { equals: category, mode: 'insensitive' };
+
+    // distinct locations
+    const rawLocations = await prisma.asset.findMany({
+      where: {},
+      distinct: ['location'],
+      select: { location: true },
+    });
+    const locations = Array.from(new Set(rawLocations.map((r) => String(r.location || 'Sede non definita').trim())))
+      .sort((a, b) => a.localeCompare(b, 'it'));
+
+    // distinct categories
+    const rawCategories = await prisma.asset.findMany({
+      where: {},
+      distinct: ['category'],
+      select: { category: true },
+    });
+    const categories = Array.from(new Set(rawCategories.map((r) => String(r.category || 'ALTRO').trim())))
+      .sort((a, b) => a.localeCompare(b, 'it'));
+
+    // departments scoped by optional where
+    const rawDepts = await prisma.asset.findMany({
+      where,
+      distinct: ['assignedTo'],
+      select: { assignedTo: true },
+    });
+    const departments = Array.from(new Set(rawDepts.map((r) => String(r.assignedTo || 'Non assegnato').trim())))
+      .sort((a, b) => a.localeCompare(b, 'it'));
+
+    return res.json({ locations, categories, departments });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/assets/:id — Dettaglio asset con ticket collegati
  */
 async function getAsset(req, res, next) {

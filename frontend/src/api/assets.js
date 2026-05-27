@@ -12,6 +12,10 @@ export const getAssetStats = () => {
   return api.get('/assets/stats')
 }
 
+export const getAssetOptions = (params = {}) => {
+  return api.get('/assets/options', { params })
+}
+
 export const createAsset = (data) => {
   return api.post('/assets', data)
 }

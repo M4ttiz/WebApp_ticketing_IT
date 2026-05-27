@@ -46,6 +46,17 @@ router.get(
   assetController.topOpenTicketsByProduct
 );
 
+// GET /api/assets/options — filter option lists (locations, categories, departments)
+router.get(
+  '/options',
+  [
+    query('location').optional().trim().isLength({ max: 200 }).withMessage('Sede troppo lunga'),
+    query('category').optional().trim().isLength({ max: 100 }).withMessage('Categoria troppo lunga'),
+  ],
+  validate,
+  assetController.getAssetOptions
+);
+
 // GET /api/assets/stats — Aggregated asset counts
 router.get(
   '/stats',

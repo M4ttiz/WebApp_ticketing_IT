@@ -8,7 +8,7 @@ import CommentThread from '../components/CommentThread'
 import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
-import { getAssets, getAsset, getAssetStats } from '../api/assets'
+import { getAssets, getAsset, getAssetOptions } from '../api/assets'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ui } from '../lib/utils'
@@ -119,16 +119,34 @@ export default function TicketDetail() {
 
   async function loadAssetFilters() {
     try {
-      const res = await getAssetStats()
+      const res = await getAssetOptions()
       setAssetFilterOptions({
-        categories: Array.isArray(res.data.byCategory) ? res.data.byCategory.map((item) => item.category) : [],
-        locations: Array.isArray(res.data.bySede) ? res.data.bySede.map((item) => item.sede) : [],
-        departments: Array.isArray(res.data.byDepartment) ? res.data.byDepartment.map((item) => item.department) : [],
+        categories: Array.isArray(res.data.categories) ? res.data.categories : [],
+        locations: Array.isArray(res.data.locations) ? res.data.locations : [],
+        departments: Array.isArray(res.data.departments) ? res.data.departments : [],
       })
     } catch (e) {
       toast.error('Errore nel caricamento dei filtri asset')
     }
   }
+
+  useEffect(() => {
+    // When location or category changes, refresh scoped departments
+    async function refreshScopedOptions() {
+      try {
+        const res = await getAssetOptions({ location: assetLocationFilter || undefined, category: assetCategoryFilter || undefined })
+        const departments = Array.isArray(res.data.departments) ? res.data.departments : []
+        setAssetFilterOptions((p) => ({ ...p, departments }))
+        // if current selected department is no longer valid, clear it
+        if (assetDepartmentFilter && !departments.includes(assetDepartmentFilter)) {
+          setAssetDepartmentFilter('')
+        }
+      } catch (err) {
+        // non-fatal
+      }
+    }
+    refreshScopedOptions()
+  }, [assetLocationFilter, assetCategoryFilter])
 
   useEffect(() => {
     loadTicket()
