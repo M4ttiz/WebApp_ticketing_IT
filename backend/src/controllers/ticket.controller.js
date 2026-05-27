@@ -269,6 +269,14 @@ async function getTicket(req, res, next) {
     const ticketId = parseInt(req.params.id);
     const { role, id: userId } = req.user;
 
+    const auditLogsInclude = {
+      include: { user: { select: { id: true, firstName: true, lastName: true, role: true } } },
+      orderBy: { createdAt: 'desc' },
+    }
+    if (role === 'user') {
+      auditLogsInclude.where = { action: { not: 'Commento interno aggiunto' } }
+    }
+
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -290,10 +298,7 @@ async function getTicket(req, res, next) {
           include: { uploader: { select: { id: true, firstName: true, lastName: true } } },
           orderBy: { createdAt: 'asc' },
         },
-        auditLogs: {
-          include: { user: { select: { id: true, firstName: true, lastName: true, role: true } } },
-          orderBy: { createdAt: 'desc' },
-        },
+        auditLogs: auditLogsInclude,
       },
     });
 
