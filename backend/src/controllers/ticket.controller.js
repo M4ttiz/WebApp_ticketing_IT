@@ -566,6 +566,10 @@ async function addComment(req, res, next) {
       throw new ForbiddenError();
     }
 
+    if (ticket.status === 'CHIUSO') {
+      throw new ForbiddenError('Non è possibile aggiungere commenti su ticket chiuso definitivamente');
+    }
+
     // Customers cannot post internal comments
     if (role === 'user' && isInternal) {
       throw new ForbiddenError('Non puoi creare commenti interni');

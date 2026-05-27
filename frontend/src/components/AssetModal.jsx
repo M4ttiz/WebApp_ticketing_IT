@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save } from 'lucide-react'
+import { X, Save, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createAsset, updateAsset } from '../api/assets'
+import { createAsset, updateAsset, deleteAsset } from '../api/assets'
 import api from '../api/axios'
 import { ui } from '../lib/utils'
+import ConfirmModal from './ConfirmModal'
+import { useAuth } from '../context/AuthContext'
 
 const DEFAULT_CATEGORIES = [
   'LAPTOP', 'DESKTOP', 'MONITOR', 'STAMPANTE', 'ACCESS_POINT',
@@ -16,8 +18,11 @@ const STATUSES = [
 ]
 
 export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const isEdit = !!asset
   const [loading, setLoading] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
   const [form, setForm] = useState({
     name: '', category: '', brand: '', model: '',
@@ -94,6 +99,22 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
         ? `${details[0].field}: ${details[0].message}`
         : null
       toast.error(firstDetail || err.response?.data?.error || 'Errore nel salvataggio')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!asset?.id) return
+    setLoading(true)
+    try {
+      await deleteAsset(asset.id)
+      toast.success('Asset eliminato')
+      setConfirmDelete(false)
+      onSaved()
+      onClose()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Errore durante l\'eliminazione')
     } finally {
       setLoading(false)
     }
@@ -220,16 +241,36 @@ export default function AssetModal({ isOpen, onClose, asset, onSaved }) {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-                  <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 transition-colors">
-                    Annulla
-                  </button>
-                  <button type="submit" disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white transition-colors">
-                    <Save size={16} />
-                    {loading ? 'Salvataggio...' : 'Salva'}
-                  </button>
+                <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-slate-700">
+                  {isEdit && isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(true)}
+                      className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-500 hover:bg-rose-600 text-white transition-colors"
+                    >
+                      <Trash2 size={16} /> Elimina
+                    </button>
+                  )}
+                  <div className="flex justify-end gap-3 sm:ml-auto">
+                    <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 transition-colors">
+                      Annulla
+                    </button>
+                    <button type="submit" disabled={loading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white transition-colors">
+                      <Save size={16} />
+                      {loading ? 'Salvataggio...' : 'Salva'}
+                    </button>
+                  </div>
                 </div>
               </form>
+            <ConfirmModal
+              open={confirmDelete}
+              onCancel={() => setConfirmDelete(false)}
+              onConfirm={handleDelete}
+              title="Elimina asset"
+              message={`Sei sicuro di voler eliminare "${asset?.name}"?`}
+              confirmText="Elimina"
+              danger
+            />
             </div>
           </motion.div>
         </>

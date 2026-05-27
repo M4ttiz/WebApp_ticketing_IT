@@ -78,6 +78,7 @@ export default function TicketDetail() {
 
   const isAdmin = user?.role === 'admin'
   const isAgent = user?.role === 'admin' || user?.role === 'technician'
+  const isClosed = ticket?.status === 'CHIUSO'
 
   useEffect(() => {
     loadTicket()
@@ -215,6 +216,10 @@ export default function TicketDetail() {
 
   async function sendComment() {
     if (!content.trim()) return
+    if (isClosed) {
+      toast.error('Non è possibile aggiungere commenti su ticket chiuso definitivamente')
+      return
+    }
     setSending(true)
     try {
       const res = await api.post(`/tickets/${id}/comments`, { content, isInternal })
@@ -486,6 +491,7 @@ export default function TicketDetail() {
                     <input
                       type="checkbox"
                       checked={isInternal}
+                      disabled={isClosed}
                       onChange={(e) => setIsInternal(e.target.checked)}
                       className="rounded border-slate-600 bg-slate-900 text-primary-500"
                     />
@@ -494,12 +500,17 @@ export default function TicketDetail() {
                 )}
                 <button
                   onClick={sendComment}
-                  disabled={sending || !content.trim()}
+                  disabled={sending || !content.trim() || isClosed}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors ml-auto"
                 >
                   {sending ? 'Invio...' : <><Send size={14} /> Invia</>}
                 </button>
               </div>
+              {isClosed && (
+                <div className="mt-3 text-sm text-amber-300">
+                  Non è possibile aggiungere commenti su ticket chiuso definitivamente.
+                </div>
+              )}
             </div>
           </div>
         </div>
