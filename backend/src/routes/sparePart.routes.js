@@ -25,6 +25,13 @@ router.get(
   sparePartController.getSparePart
 );
 
+router.get(
+  '/:id/history',
+  [param('id').isUUID().withMessage('ID ricambio non valido')],
+  validate,
+  sparePartController.getSparePartHistory
+);
+
 router.post(
   '/',
   requireRole(['admin', 'technician']),

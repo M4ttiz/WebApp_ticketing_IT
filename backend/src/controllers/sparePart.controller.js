@@ -245,6 +245,42 @@ async function updateSparePart(req, res, next) {
   }
 }
 
+async function getSparePartHistory(req, res, next) {
+  try {
+    const { id } = req.params;
+    const item = await prisma.sparePart.findUnique({ where: { id } });
+    if (!item) throw new NotFoundError('Ricambio');
+
+    const history = await prisma.ticketSparePart.findMany({
+      where: { sparePartId: id },
+      include: {
+        ticket: {
+          select: {
+            id: true,
+            ticketNumber: true,
+            title: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const rows = history.map((entry) => ({
+      id: entry.id,
+      ticketId: entry.ticket.id,
+      ticketNumber: entry.ticket.ticketNumber,
+      title: entry.ticket.title,
+      status: entry.ticket.status,
+      quantity: entry.quantity,
+    }));
+
+    res.json(rows);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function deleteSparePart(req, res, next) {
   try {
     const { id } = req.params;
@@ -402,6 +438,7 @@ module.exports = {
   normalizeUsedSpareParts,
   listSpareParts,
   getSparePart,
+  getSparePartHistory,
   createSparePart,
   updateSparePart,
   deleteSparePart,

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Pencil, Search, Trash2, Package2, Plus, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Pencil, Search, Trash2, Package2, Plus, ToggleLeft, ToggleRight, History } from 'lucide-react'
 import DataTable from '../components/DataTable'
 import ConfirmModal from '../components/ConfirmModal'
 import api from '../api/axios'
@@ -9,12 +10,14 @@ import { ui } from '../lib/utils'
 const DEFAULT_FORM = { name: '', code: '', description: '', quantity: 0, minimumStock: 0, notes: '' }
 
 export default function SpareParts() {
+  const navigate = useNavigate()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(DEFAULT_FORM)
   const [modal, setModal] = useState(null)
+  const [historyModal, setHistoryModal] = useState(null)
 
   const fetchItems = async () => {
     setLoading(true)
@@ -83,6 +86,15 @@ export default function SpareParts() {
     }
   }
 
+  const openHistory = async (item) => {
+    try {
+      const res = await api.get(`/spare-parts/${item.id}/history`)
+      setHistoryModal({ item, rows: res.data || [] })
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Errore nel caricamento dello storico')
+    }
+  }
+
   const columns = [
     { key: 'name', label: 'Nome' },
     { key: 'code', label: 'Codice', render: (row) => row.code || '—' },
@@ -104,6 +116,9 @@ export default function SpareParts() {
       label: '',
       render: (row) => (
         <div className="flex items-center gap-2">
+          <button onClick={() => openHistory(row)} className="p-1.5 rounded hover:bg-slate-700 text-amber-400 transition-colors" title="Storico utilizzi">
+            <History size={16} />
+          </button>
           <button onClick={() => { setEditing(row); setForm({ name: row.name, code: row.code || '', description: row.description || '', quantity: row.quantity ?? 0, minimumStock: row.minimumStock ?? 0, notes: row.notes || '' }) }} className="p-1.5 rounded hover:bg-slate-700 text-primary-400 transition-colors">
             <Pencil size={16} />
           </button>
@@ -171,6 +186,42 @@ export default function SpareParts() {
         onCancel={() => setModal(null)}
         danger
       />
+
+      <ConfirmModal
+        open={!!historyModal}
+        title={`Storico: ${historyModal?.item?.name || ''}`}
+        message="Ticket in cui è stato usato questo ricambio:"
+        onConfirm={() => setHistoryModal(null)}
+        onCancel={() => setHistoryModal(null)}
+        confirmText="Chiudi"
+      >
+        <div className="space-y-2 max-h-72 overflow-y-auto">
+          {historyModal?.rows?.length ? (
+            historyModal.rows.map((row) => (
+              <button
+                key={row.ticketId}
+                type="button"
+                onClick={() => {
+                  setHistoryModal(null)
+                  navigate(`/tickets/${row.ticketId}`)
+                }}
+                className="w-full flex items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-left hover:bg-slate-800 transition-colors"
+              >
+                <div>
+                  <div className="text-sm font-medium text-slate-100">#{row.ticketNumber}</div>
+                  <div className="text-xs text-slate-400 truncate max-w-[220px]">{row.title}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-slate-400">Qtà {row.quantity}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-primary-400">{row.status}</div>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="text-sm text-slate-400">Nessun utilizzo registrato per questo ricambio.</div>
+          )}
+        </div>
+      </ConfirmModal>
     </div>
   )
 }
