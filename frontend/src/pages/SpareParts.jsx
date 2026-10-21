@@ -190,35 +190,66 @@ export default function SpareParts() {
       <ConfirmModal
         open={!!historyModal}
         title={`Storico: ${historyModal?.item?.name || ''}`}
-        message="Ticket in cui è stato usato questo ricambio:"
+        message="Movimenti di magazzino e utilizzi relativi a questo ricambio:"
         onConfirm={() => setHistoryModal(null)}
         onCancel={() => setHistoryModal(null)}
         confirmText="Chiudi"
       >
         <div className="space-y-2 max-h-72 overflow-y-auto">
           {historyModal?.rows?.length ? (
-            historyModal.rows.map((row) => (
-              <button
-                key={row.ticketId}
-                type="button"
-                onClick={() => {
-                  setHistoryModal(null)
-                  navigate(`/tickets/${row.ticketId}`)
-                }}
-                className="w-full flex items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-left hover:bg-slate-800 transition-colors"
-              >
-                <div>
-                  <div className="text-sm font-medium text-slate-100">#{row.ticketNumber}</div>
-                  <div className="text-xs text-slate-400 truncate max-w-[220px]">{row.title}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-slate-400">Qtà {row.quantity}</div>
-                  <div className="text-[10px] uppercase tracking-wide text-primary-400">{row.status}</div>
-                </div>
-              </button>
-            ))
+            historyModal.rows.map((row) => {
+              const isPositive = row.movementType === 'POSITIVE'
+              const dateLabel = row.createdAt ? new Date(row.createdAt).toLocaleString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              }) : 'Data non disponibile'
+
+              if (!row.ticketId) {
+                return (
+                  <div key={row.id} className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-slate-100">Acquisto / rifornimento</div>
+                        <div className="text-[11px] text-slate-400">{dateLabel}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-emerald-300">+{row.quantity}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-emerald-400">in entrata</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => {
+                    setHistoryModal(null)
+                    navigate(`/tickets/${row.ticketId}`)
+                  }}
+                  className="w-full flex items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-left hover:bg-slate-800 transition-colors"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-slate-100">#{row.ticketNumber}</div>
+                    <div className="text-xs text-slate-400 truncate max-w-[220px]">{row.title}</div>
+                    <div className="text-[10px] text-slate-500">{dateLabel}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-sm font-semibold ${isPositive ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {isPositive ? '+' : '-'}{row.quantity}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wide text-primary-400">{row.status}</div>
+                  </div>
+                </button>
+              )
+            })
           ) : (
-            <div className="text-sm text-slate-400">Nessun utilizzo registrato per questo ricambio.</div>
+            <div className="text-sm text-slate-400">Nessun movimento registrato per questo ricambio.</div>
           )}
         </div>
       </ConfirmModal>

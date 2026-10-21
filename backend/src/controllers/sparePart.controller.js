@@ -85,6 +85,18 @@ function normalizeUsedSpareParts(rawParts = []) {
   });
 }
 
+async function appendSparePartStockMovement(tx, { sparePartId, ticketId = null, movementType, quantity, note = null }) {
+  const normalizedType = movementType === 'POSITIVE' ? 'POSITIVE' : 'NEGATIVE';
+  const ticketValue = ticketId === null || ticketId === undefined ? 'NULL' : Number(ticketId);
+  const noteValue = note ? String(note).replace(/'/g, "''") : null;
+
+  await tx.$executeRawUnsafe(`
+    INSERT INTO "spare_part_stock_movements"
+      ("spare_part_id", "ticket_id", "movement_type", "quantity", "note", "created_at")
+    VALUES ('${sparePartId}', ${ticketValue}, '${normalizedType}', ${Number(quantity)}, ${noteValue ? `'${noteValue}'` : 'NULL'}, NOW())
+  `);
+}
+
 async function listSpareParts(req, res, next) {
   try {
     const { search, includeInactive = 'false' } = req.query;
@@ -227,9 +239,24 @@ async function updateSparePart(req, res, next) {
       throw new AppError('Esiste già un ricambio con lo stesso nome o codice', 409);
     }
 
-    const item = await prisma.sparePart.update({
-      where: { id },
-      data: updateData,
+    const delta = req.body.quantity !== undefined ? Number(payload.quantity) - Number(existing.quantity ?? 0) : 0;
+
+    const item = await prisma.$transaction(async (tx) => {
+      const updated = await tx.sparePart.update({
+        where: { id },
+        data: updateData,
+      });
+
+      if (req.body.quantity !== undefined && delta > 0) {
+        await appendSparePartStockMovement(tx, {
+          sparePartId: id,
+          movementType: 'POSITIVE',
+          quantity: delta,
+          note: 'Acquisto / rifornimento',
+        });
+      }
+
+      return updated;
     });
 
     const minimumStock = req.body.minimumStock !== undefined || req.body.minimum_stock !== undefined
@@ -251,31 +278,36 @@ async function getSparePartHistory(req, res, next) {
     const item = await prisma.sparePart.findUnique({ where: { id } });
     if (!item) throw new NotFoundError('Ricambio');
 
-    const history = await prisma.ticketSparePart.findMany({
-      where: { sparePartId: id },
-      include: {
-        ticket: {
-          select: {
-            id: true,
-            ticketNumber: true,
-            title: true,
-            status: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const rows = await prisma.$queryRawUnsafe(`
+      SELECT
+        sm.id,
+        sm."created_at" AS "createdAt",
+        sm.quantity,
+        sm."movement_type" AS "movementType",
+        sm.note,
+        sm."ticket_id" AS "ticketId",
+        t."ticket_number" AS "ticketNumber",
+        t.title AS "ticketTitle",
+        t.status AS "ticketStatus"
+      FROM "spare_part_stock_movements" sm
+      LEFT JOIN "tickets" t ON t.id = sm."ticket_id"
+      WHERE sm."spare_part_id" = '${id}'
+      ORDER BY sm."created_at" DESC
+    `);
 
-    const rows = history.map((entry) => ({
+    const history = rows.map((entry) => ({
       id: entry.id,
-      ticketId: entry.ticket.id,
-      ticketNumber: entry.ticket.ticketNumber,
-      title: entry.ticket.title,
-      status: entry.ticket.status,
-      quantity: entry.quantity,
+      ticketId: entry.ticketId,
+      ticketNumber: entry.ticketNumber,
+      title: entry.ticketId ? entry.ticketTitle : (entry.note || 'Acquisto / rifornimento'),
+      status: entry.ticketStatus,
+      quantity: Number(entry.quantity),
+      movementType: entry.movementType,
+      note: entry.note,
+      createdAt: entry.createdAt,
     }));
 
-    res.json(rows);
+    res.json(history);
   } catch (error) {
     next(error);
   }
@@ -363,6 +395,26 @@ async function upsertTicketSparePart(req, res, next) {
         data: { quantity: nextQuantity },
       });
 
+      if (delta > 0) {
+        await appendSparePartStockMovement(tx, {
+          sparePartId: payload.sparePartId,
+          ticketId,
+          movementType: 'NEGATIVE',
+          quantity: delta,
+          note: 'Utilizzo su ticket',
+        });
+      }
+
+      if (delta < 0) {
+        await appendSparePartStockMovement(tx, {
+          sparePartId: payload.sparePartId,
+          ticketId,
+          movementType: 'POSITIVE',
+          quantity: Math.abs(delta),
+          note: 'Rimborso stock ticket',
+        });
+      }
+
       return tx.ticketSparePart.upsert({
         where: {
           ticketId_sparePartId: {
@@ -414,6 +466,14 @@ async function deleteTicketSparePart(req, res, next) {
         data: {
           quantity: item.sparePart.quantity + item.quantity,
         },
+      });
+
+      await appendSparePartStockMovement(tx, {
+        sparePartId,
+        ticketId,
+        movementType: 'POSITIVE',
+        quantity: item.quantity,
+        note: 'Rimozione utilizzo ticket',
       });
 
       await tx.ticketSparePart.delete({
