@@ -156,10 +156,10 @@ async function getDashboard(req, res, next) {
         sp.code,
         sp.quantity,
         COALESCE(sp.minimum_stock, 0)::int AS minimum_stock,
-        (COALESCE(sp.minimum_stock, 0) - sp.quantity)::int AS deficit
+        (sp.quantity - COALESCE(sp.minimum_stock, 0))::int AS deficit
       FROM spare_parts sp
       WHERE sp.is_active = true
-        AND sp.quantity < COALESCE(sp.minimum_stock, 0)
+        AND sp.quantity <= COALESCE(sp.minimum_stock, 0)
       ORDER BY deficit DESC, sp.name ASC
       LIMIT 10
     `);

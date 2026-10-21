@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma');
 const { AppError, NotFoundError } = require('../utils/errors');
 
-function validateSparePartPayload(data = {}, { allowQuantity = true } = {}) {
+function validateSparePartPayload(data = {}, { allowQuantity = true, requireName = true } = {}) {
   const name = typeof data.name === 'string' ? data.name.trim() : '';
   const code = typeof data.code === 'string' ? data.code.trim() : '';
   const description = typeof data.description === 'string' ? data.description.trim() : '';
@@ -9,7 +9,7 @@ function validateSparePartPayload(data = {}, { allowQuantity = true } = {}) {
   const quantity = Number(data.quantity ?? 0);
   const minimumStock = Number(data.minimumStock ?? data.minimum_stock ?? 0);
 
-  if (!name) {
+  if (requireName && !name) {
     throw new AppError('Il nome del ricambio è obbligatorio', 400);
   }
 
@@ -203,18 +203,15 @@ async function updateSparePart(req, res, next) {
     const existing = await prisma.sparePart.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError('Ricambio');
 
-    const payload = validateSparePartPayload(req.body, { allowQuantity: true });
-    const updateData = {
-      name: payload.name,
-      code: payload.code,
-      description: payload.description,
-      quantity: payload.quantity,
-      notes: payload.notes,
-    };
+    const payload = validateSparePartPayload(req.body, { allowQuantity: true, requireName: false });
+    const updateData = {};
 
-    if (req.body.isActive !== undefined) {
-      updateData.isActive = Boolean(req.body.isActive);
-    }
+    if (req.body.name !== undefined) updateData.name = payload.name || existing.name;
+    if (req.body.code !== undefined) updateData.code = payload.code || null;
+    if (req.body.description !== undefined) updateData.description = payload.description || null;
+    if (req.body.quantity !== undefined) updateData.quantity = payload.quantity;
+    if (req.body.notes !== undefined) updateData.notes = payload.notes || null;
+    if (req.body.isActive !== undefined) updateData.isActive = Boolean(req.body.isActive);
 
     const dup = await prisma.sparePart.findFirst({
       where: {

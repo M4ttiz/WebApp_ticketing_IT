@@ -241,7 +241,15 @@ export default function Dashboard() {
                         const qty = Number(window.prompt(`Quanti pezzi vuoi aggiungere a ${part.name}?`, '5'))
                         if (!Number.isInteger(qty) || qty <= 0) return
                         try {
-                          await api.patch(`/spare-parts/${part.id}`, { quantity: Number(part.quantity) + qty, minimumStock: Number(part.minimum_stock) || 0 })
+                          await api.patch(`/spare-parts/${part.id}`, {
+                            name: part.name,
+                            code: part.code || null,
+                            description: part.description || null,
+                            notes: part.notes || null,
+                            quantity: Number(part.quantity) + qty,
+                            minimumStock: Number(part.minimum_stock ?? 0),
+                            isActive: true,
+                          })
                           setData((prev) => ({
                             ...prev,
                             lowStockSpareParts: (prev?.lowStockSpareParts || []).filter((item) => item.id !== part.id),

@@ -44,3 +44,10 @@ test('payload usati del ticket viene normalizzato correttamente', () => {
   assert.equal(result.length, 2);
   assert.equal(result[0].quantity, 2);
 });
+
+test('aggiornamento parziale del ricambio consente quantità e soglia senza nome', () => {
+  const result = validateSparePartPayload({ quantity: 5, minimumStock: 1 }, { requireName: false });
+
+  assert.equal(result.quantity, 5);
+  assert.equal(result.minimumStock, 1);
+});
