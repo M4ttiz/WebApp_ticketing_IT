@@ -1,256 +1,187 @@
 # IT Ticketing System 🎫
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/M4ttiz/WebApp_ticketing_IT.svg)](https://github.com/M4ttiz/WebApp_ticketing_IT)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org)
-[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://react.dev)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](docker-compose.yml)
-
-A professional, self-hosted IT ticket management system built with **Node.js + Express + React**, designed for enterprises and small teams. Deploy locally, on Ubuntu, Windows, or via Docker.
+A self-hosted IT ticketing platform built with Node.js, Express, React, Vite and PostgreSQL. It covers ticket workflow, asset inventory, dashboard KPIs, user roles, notifications and spare-part stock tracking.
 
 ---
 
-## 🚀 Key Features
+## Main features
 
-✅ **Modern Web Interface** - React + Vite + Tailwind CSS  
-✅ **RESTful API** - Express.js with comprehensive ticket management  
-✅ **PostgreSQL** - Robust database with Prisma ORM  
-✅ **JWT Authentication** - Secure with refresh tokens  
-✅ **Role-Based Access** - Admin, Agent, Customer roles  
-✅ **Ticket Management** - Create, assign, track, resolve  
-✅ **File Attachments** - Upload documents to tickets  
-✅ **Email Notifications** - SMTP integration  
-✅ **Docker Ready** - docker-compose.yml included  
-✅ **Multi-Platform** - Ubuntu LTS, Windows, XAMPP  
-✅ **Backup Scripts** - PostgreSQL backup automation  
-✅ **SSL/HTTPS** - Let's Encrypt Certbot support  
+- Ticket lifecycle management with status transitions and audit history
+- User authentication and role-based access control
+- Asset inventory with assignment and internal tracking
+- Spare-part catalog independent from assets
+- Minimum stock threshold alerting and low-stock dashboard
+- Stock movement history for purchases and usage
+- Ticket-to-spare-part association with stock deduction validation
+- Dashboard cards, metrics and charts for operational monitoring
+- File attachments, comments and notifications
+- Docker-based deployment for quick local setup
 
 ---
 
-## 📋 Quick Start
+## Functional areas
 
-### Prerequisites
-- **Node.js** 18+ & npm
-- **PostgreSQL** 14+
-- **Nginx** (optional)
+### Ticketing
 
-### 1️⃣ Clone & Run Locally
+- Create, assign and update tickets
+- Validate state changes such as in progress, waiting, resolved and closed
+- Enforce required resolution note before setting ticket as resolved
+- Prevent takeover without selecting an asset when required by workflow
+- Add comments and internal notes
+- Track ticket history and audits
+
+### Inventory and assets
+
+- Manage assets with category, status, owner and assignment info
+- Link assets to tickets
+- Use asset pickup and release flow
+- Keep a separate asset inventory independent from spare-part stock
+
+### Spare parts
+
+- Manage a standalone spare-part catalog
+- Keep a quantity and a minimum stock value
+- Prevent negative stock and block allocation when not enough stock is available
+- Deduct stock when a spare part is attached to a ticket
+- Restore stock when a part is removed from a ticket
+- Show low-stock items in dashboard and quick restock action
+- Record positive stock movements such as purchases and negative movements such as usage
+- Open the historical log for each part and navigate directly to the related ticket
+
+### Dashboard
+
+- KPI cards for open, in progress, waiting, resolved and closed tickets
+- Most-used spare parts chart
+- Low-stock spare parts card with quick restock
+- Recent ticket list and operational overview
+
+---
+
+## Technology stack
+
+- Backend: Node.js + Express + Prisma
+- Frontend: React + Vite + Tailwind CSS
+- Database: PostgreSQL
+- Auth: JWT + refresh tokens
+- Deployment: Docker Compose + Nginx
+- Monitoring: basic operational dashboard and system metrics
+
+---
+
+## Prerequisites
+
+- Node.js 18 or newer
+- npm
+- PostgreSQL 14+ or Docker Desktop
+- optional: Docker and Docker Compose
+
+---
+
+## Local setup
+
+### 1. Clone the repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/M4ttiz/WebApp_ticketing_IT.git
 cd WebApp_ticketing_IT
+```
 
-# Backend setup
+### 2. Backend setup
+
+```bash
 cd backend
-cp .env.example .env
-# Edit .env with your database credentials (see DATABASE_URL section)
 npm install
 npx prisma generate
 npx prisma migrate dev
 npm run dev
+```
 
-# Frontend setup (in another terminal)
+### 3. Frontend setup
+
+Open a second terminal:
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-**Access the app**:
+The app will be available at:
+
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:5000
+- Backend: http://localhost:5000
 
 ---
 
-### 2️⃣ Docker Deployment (Easiest)
+## Docker setup
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-Access at `http://localhost`
+Then access:
 
-⚠️ **Important**: Edit `docker-compose.yml` and set secure credentials before deploying to production!
+- Frontend: http://localhost
+- Backend: http://localhost:5000
 
 ---
 
-### 3️⃣ Ubuntu Server LTS Deployment
+## Fresh database setup from Prisma schema
 
-Full guide in [DOCKER_DEPLOYMENT_GUIDE.md](DOCKER_DEPLOYMENT_GUIDE.md)
+If you want to recreate the database from the current schema without relying on the old migration chain, use one of these commands:
 
-**Quick steps**:
 ```bash
-# Install dependencies
-sudo apt update
-sudo apt install -y curl gnupg build-essential nodejs postgresql postgresql-contrib nginx
-
-# Create database
-sudo -u postgres createuser -P ticketing_user
-sudo -u postgres createdb -O ticketing_user ticketing_db
-
-# Clone & setup backend
-git clone <repo-url> /opt/ticketing-app
-cd /opt/ticketing-app/backend
-cp .env.example .env
-# Edit .env with your database credentials
-npm install
-npx prisma migrate deploy
-npm run build
-
-# Setup PM2 for background execution
-sudo npm install -g pm2
-pm2 start ecosystem.config.js --env production
-pm2 startup
-pm2 save
-
-# Build frontend
-cd ../frontend
-npm install
-npm run build
-sudo mkdir -p /var/www/ticketing
-sudo cp -r dist/* /var/www/ticketing
-
-# Configure Nginx (see nginx/ticketing.conf)
-sudo cp nginx/ticketing.conf /etc/nginx/sites-available/ticketing
-sudo ln -s /etc/nginx/sites-available/ticketing /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-
-# Enable firewall
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw enable
-
-# Optional: SSL with Let's Encrypt
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
+cd backend
+npx prisma generate
+npx prisma db push
 ```
 
----
+Or for a fully versioned workflow:
 
-### 4️⃣ Windows Server / XAMPP
-
-**Option A: Windows Server (Node + PostgreSQL)**
-- Install [Node.js LTS](https://nodejs.org)
-- Install [PostgreSQL for Windows](https://www.postgresql.org/download/windows/)
-- Create database: `createdb -U postgres ticketing_db`
-- Clone repo and follow backend/frontend setup above
-
-**Option B: Docker Desktop (Recommended)**
-```powershell
-docker-compose up -d
-```
-
----
-
-## 📚 Documentation
-
-| File | Purpose |
-|------|---------|
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contributing guidelines |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
-| [DOCKER_DEPLOYMENT_GUIDE.md](DOCKER_DEPLOYMENT_GUIDE.md) | Detailed Docker setup |
-| [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) | Pre-production checklist |
-| [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Running & maintenance |
-
----
-
-## 🔐 Security Features
-
-- ✅ JWT authentication with refresh tokens
-- ✅ Bcrypt password hashing
-- ✅ CORS protection
-- ✅ Rate limiting (login attempts)
-- ✅ SQL injection prevention (Prisma ORM)
-- ✅ HTTPS/SSL support (Let's Encrypt)
-- ✅ Input validation on all endpoints
-
----
-
-## 📧 Email Integration
-
-Configure SMTP for notifications:
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM="IT Ticketing <noreply@example.com>"
-```
-
-Triggers:
-- Ticket assignment
-- Status updates
-- Comments & replies
-- Resolution alerts
-
----
-
-## 🗄 Database
-
-**PostgreSQL** with Prisma ORM
-
-**Schema includes**:
-- Users (roles: admin, agent, customer)
-- Tickets (with categories, priorities, statuses)
-- Categories (configurable types)
-- Attachments (file storage)
-- Audit logs
-
-**Migrations**:
 ```bash
-npx prisma migrate dev    # development
-npx prisma migrate deploy # production
+cd backend
+npx prisma migrate dev --name init
 ```
 
----
-
-## 🚀 Performance Tips
-
-- Enable Redis for session caching
-- Use gzip compression in Nginx
-- Configure PostgreSQL connection pooling
-- Monitor with PM2 Plus (optional)
-- Set CDN for static assets
+This is the recommended flow when the schema file is the source of truth.
 
 ---
 
-## 🤝 Contributing
+## Project structure
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md)
-
-**Quick start**:
-```bash
-git checkout -b feature/amazing-feature
-# Make changes & commit
-git commit -m "feat: add amazing feature"
-git push origin feature/amazing-feature
-# Create a Pull Request
-```
+- backend: Express API, Prisma client, controllers, routes, services
+- frontend: React UI and dashboards
+- nginx: reverse proxy and static frontend configuration
+- docker-compose.yml: full local stack
 
 ---
 
-## 📝 License
+## Useful files
 
-[MIT License](LICENSE) © 2024 IT Ticketing Contributors
-
----
-
-## 💬 Support
-
-- **Issues**: [GitHub Issues](https://github.com/M4ttiz/WebApp_ticketing_IT/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/M4ttiz/WebApp_ticketing_IT/discussions)
+- [backend/prisma/schema.prisma](backend/prisma/schema.prisma)
+- [backend/src/controllers/ticket.controller.js](backend/src/controllers/ticket.controller.js)
+- [backend/src/controllers/sparePart.controller.js](backend/src/controllers/sparePart.controller.js)
+- [backend/src/controllers/dashboard.controller.js](backend/src/controllers/dashboard.controller.js)
+- [frontend/src/pages/Dashboard.jsx](frontend/src/pages/Dashboard.jsx)
+- [frontend/src/pages/SpareParts.jsx](frontend/src/pages/SpareParts.jsx)
 
 ---
 
-## 🎯 Roadmap
+## Notes about the stock logic
 
-- [ ] WhatsApp integration
-- [ ] SMS notifications
-- [ ] Advanced analytics & reporting
-- [ ] AI-powered ticket categorization
-- [ ] Mobile app (React Native)
-- [ ] GraphQL API
+The spare-part workflow is designed to avoid stock inconsistencies:
+
+- stock is reduced when a part is assigned to a ticket
+- stock is blocked when not enough quantity is available
+- stock is restored when usage is removed
+- minimum stock is used to represent the alert threshold
+- purchases and replenishments are recorded as positive movements
+- ticket usage is recorded as negative movements
+
+This makes the dashboard and history reliable even when the app is reinstalled or restored.
 
 ---
 
-**Made with ❤️ by the IT Ticketing Team** · [⬆ back to top](#it-ticketing-system-)
+## License
+
+MIT
