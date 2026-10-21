@@ -289,7 +289,7 @@ model TicketAsset {
 }
 
 model SparePart {
-  id            String                    @id @default(uuid())
+  id            String                    @id
   name          String                    @db.VarChar(255)
   code          String?                   @db.VarChar(100)
   description   String?                   @db.Text
@@ -310,7 +310,7 @@ model SparePart {
 }
 
 model TicketSparePart {
-  id          String   @id @default(uuid())
+  id          String   @id
   ticketId    Int      @map("ticket_id")
   sparePartId String   @map("spare_part_id") @db.VarChar(36)
   quantity    Int      @default(1)

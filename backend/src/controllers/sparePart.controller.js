@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const prisma = require('../lib/prisma');
 const { AppError, NotFoundError } = require('../utils/errors');
 
@@ -193,6 +194,7 @@ async function createSparePart(req, res, next) {
 
     const item = await prisma.sparePart.create({
       data: {
+        id: randomUUID(),
         name: payload.name,
         code: payload.code,
         description: payload.description,
@@ -423,6 +425,7 @@ async function upsertTicketSparePart(req, res, next) {
           },
         },
         create: {
+          id: randomUUID(),
           ticketId,
           sparePartId: payload.sparePartId,
           quantity: payload.quantity,
