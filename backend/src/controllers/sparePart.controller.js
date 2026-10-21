@@ -304,22 +304,49 @@ async function upsertTicketSparePart(req, res, next) {
       throw new AppError('Questo ricambio è stato disattivato e non può essere usato', 400);
     }
 
-    const item = await prisma.ticketSparePart.upsert({
+    const existingUsage = await prisma.ticketSparePart.findUnique({
       where: {
         ticketId_sparePartId: {
           ticketId,
           sparePartId: payload.sparePartId,
         },
       },
-      create: {
-        ticketId,
-        sparePartId: payload.sparePartId,
-        quantity: payload.quantity,
-      },
-      update: {
-        quantity: payload.quantity,
-      },
-      include: { sparePart: true },
+    });
+
+    const currentTicketQty = existingUsage?.quantity || 0;
+    const delta = payload.quantity - currentTicketQty;
+
+    if (delta > 0 && sparePart.quantity < delta) {
+      throw new AppError(`Giacenza insufficiente per "${sparePart.name}"`, 400);
+    }
+
+    const nextQuantity = delta > 0
+      ? sparePart.quantity - delta
+      : sparePart.quantity + Math.abs(delta);
+
+    const item = await prisma.$transaction(async (tx) => {
+      await tx.sparePart.update({
+        where: { id: sparePart.id },
+        data: { quantity: nextQuantity },
+      });
+
+      return tx.ticketSparePart.upsert({
+        where: {
+          ticketId_sparePartId: {
+            ticketId,
+            sparePartId: payload.sparePartId,
+          },
+        },
+        create: {
+          ticketId,
+          sparePartId: payload.sparePartId,
+          quantity: payload.quantity,
+        },
+        update: {
+          quantity: payload.quantity,
+        },
+        include: { sparePart: true },
+      });
     });
 
     res.status(201).json(item);
@@ -343,17 +370,27 @@ async function deleteTicketSparePart(req, res, next) {
           sparePartId,
         },
       },
+      include: { sparePart: true },
     });
 
     if (!item) return res.json({ message: 'Nessun ricambio associato al ticket' });
 
-    await prisma.ticketSparePart.delete({
-      where: {
-        ticketId_sparePartId: {
-          ticketId,
-          sparePartId,
+    await prisma.$transaction(async (tx) => {
+      await tx.sparePart.update({
+        where: { id: sparePartId },
+        data: {
+          quantity: item.sparePart.quantity + item.quantity,
         },
-      },
+      });
+
+      await tx.ticketSparePart.delete({
+        where: {
+          ticketId_sparePartId: {
+            ticketId,
+            sparePartId,
+          },
+        },
+      });
     });
 
     res.json({ message: 'Ricambio rimosso dal ticket' });

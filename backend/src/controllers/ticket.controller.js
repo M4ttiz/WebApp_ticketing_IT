@@ -37,8 +37,8 @@ function validateStatusTransition({ ticket, role, userId, targetStatus, resoluti
   }
 
   const normalizedNote = typeof resolutionNote === 'string' ? resolutionNote.trim() : '';
-  if (['RISOLTO', 'CHIUSO'].includes(targetStatus) && !normalizedNote) {
-    throw new AppError('Per risolvere o chiudere il ticket è obbligatoria una nota descrittiva', 400);
+  if (targetStatus === 'RISOLTO' && !normalizedNote) {
+    throw new AppError('Per risolvere il ticket è obbligatoria una nota descrittiva', 400);
   }
 
   if (ticket.status === targetStatus) {
@@ -558,12 +558,10 @@ async function changeStatus(req, res, next) {
 
     const usedSpareParts = Array.isArray(req.body.usedSpareParts) ? req.body.usedSpareParts : [];
 
-    if (status === 'CHIUSO') {
-      await reserveUsedSpareParts(ticketId, usedSpareParts);
-    }
-
-    if (ticket.status === 'CHIUSO' && status !== 'CHIUSO') {
-      await restoreTicketSpareParts(ticketId);
+    if (status === 'CHIUSO' && usedSpareParts.length > 0) {
+      // Lo scalino delle giacenze avviene al momento dell'associazione del ricambio al ticket,
+      // quindi non si applica nuovamente alla chiusura del ticket per evitare doppi conteggi.
+      normalizeUsedSpareParts(usedSpareParts);
     }
 
     const updateData = { status };

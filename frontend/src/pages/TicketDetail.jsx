@@ -320,10 +320,10 @@ export default function TicketDetail() {
       }
 
       const payload = { status }
-      if (['RISOLTO', 'CHIUSO'].includes(status)) {
+      if (status === 'RISOLTO') {
         const trimmedNote = statusNote.trim()
         if (!trimmedNote) {
-          throw new Error('Per risolvere o chiudere il ticket è obbligatoria una nota descrittiva.')
+          throw new Error('Per risolvere il ticket è obbligatoria una nota descrittiva.')
         }
         payload.note = trimmedNote
       }
@@ -683,7 +683,7 @@ export default function TicketDetail() {
               <div className="mt-4 grid gap-2 sm:grid-cols-[1.3fr_0.7fr_auto]">
                 <select value={sparePartId} onChange={(e) => setSparePartId(e.target.value)} className={ui.select}>
                   <option value="">Seleziona ricambio</option>
-                  {sparePartCatalog.filter((part) => part.isActive !== false).map((part) => (
+                  {sparePartCatalog.filter((part) => part.isActive !== false && Number(part.quantity ?? 0) > 0).map((part) => (
                     <option key={part.id} value={part.id}>{part.name} {part.code ? `(${part.code})` : ''}</option>
                   ))}
                 </select>
@@ -730,7 +730,7 @@ export default function TicketDetail() {
         onCancel={() => { setStatusModal(null); setStatusNote('') }}
         danger={statusModal?.value === 'RIFIUTATO'}
       >
-        {statusModal && ['RISOLTO', 'CHIUSO'].includes(statusModal.value) && (
+        {statusModal && statusModal.value === 'RISOLTO' && (
           <div className="space-y-2">
             <label className="block text-xs uppercase tracking-wide text-slate-400">Nota obbligatoria</label>
             <textarea
