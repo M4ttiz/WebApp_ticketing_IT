@@ -47,8 +47,10 @@ export default function Dashboard() {
 
   const kpi = data?.kpi || {}
   const charts = data?.charts || {}
+  const lowStockSpareParts = data?.lowStockSpareParts || []
   const recentTickets = data?.recentTickets || []
   const topAgents = data?.topAgents || []
+  const mostUsedSpareParts = charts.mostUsedSpareParts || []
 
   return (
     <div className={ui.page}>
@@ -180,6 +182,84 @@ export default function Dashboard() {
                 <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className={ui.cardSection}>
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 size={18} className="text-primary-400" />
+            <h3 className="font-semibold text-sm">Ricambi più usati</h3>
+          </div>
+          {loading ? (
+            <div className="h-64 skeleton" />
+          ) : (
+            <ResponsiveContainer width="100%" height={256}>
+              <BarChart data={mostUsedSpareParts} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis type="number" stroke="#94a3b8" fontSize={12} />
+                <YAxis type="category" dataKey="name" width={120} stroke="#94a3b8" fontSize={12} />
+                <Tooltip
+                  contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                  itemStyle={{ color: '#f1f5f9' }}
+                />
+                <Bar dataKey="used_quantity" radius={[0, 4, 4, 0]}>
+                  {(mostUsedSpareParts || []).map((_, i) => (
+                    <Cell key={i} fill={['#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#38bdf8'][i % 5]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className={ui.cardSection}>
+          <div className="flex items-center gap-2 mb-4">
+            <Inbox size={18} className="text-amber-400" />
+            <h3 className="font-semibold text-sm">Sotto scorta</h3>
+          </div>
+          {loading ? (
+            <div className="space-y-3">
+              <SkeletonRow cols={2} />
+              <SkeletonRow cols={2} />
+              <SkeletonRow cols={2} />
+            </div>
+          ) : lowStockSpareParts.length === 0 ? (
+            <div className="text-sm text-slate-400">Nessun ricambio sotto soglia.</div>
+          ) : (
+            <div className="space-y-3">
+              {lowStockSpareParts.map((part) => (
+                <div key={part.id} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-slate-100">{part.name}</div>
+                      <div className="text-xs text-slate-400">Disponibilità {part.quantity} / Min {part.minimum_stock}</div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const qty = Number(window.prompt(`Quanti pezzi vuoi aggiungere a ${part.name}?`, '5'))
+                        if (!Number.isInteger(qty) || qty <= 0) return
+                        try {
+                          await api.patch(`/spare-parts/${part.id}`, { quantity: Number(part.quantity) + qty, minimumStock: Number(part.minimum_stock) || 0 })
+                          setData((prev) => ({
+                            ...prev,
+                            lowStockSpareParts: (prev?.lowStockSpareParts || []).filter((item) => item.id !== part.id),
+                          }))
+                          window.location.reload()
+                        } catch (e) {
+                          const msg = e.response?.data?.error || 'Errore nel restock'
+                          window.alert(msg)
+                        }
+                      }}
+                      className="px-2 py-1 rounded text-xs bg-amber-500/20 text-amber-200 hover:bg-amber-500/30"
+                    >
+                      Acquistato
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

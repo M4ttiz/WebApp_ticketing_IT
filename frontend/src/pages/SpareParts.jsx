@@ -6,7 +6,7 @@ import ConfirmModal from '../components/ConfirmModal'
 import api from '../api/axios'
 import { ui } from '../lib/utils'
 
-const DEFAULT_FORM = { name: '', code: '', description: '', quantity: 0, notes: '' }
+const DEFAULT_FORM = { name: '', code: '', description: '', quantity: 0, minimumStock: 0, notes: '' }
 
 export default function SpareParts() {
   const [items, setItems] = useState([])
@@ -43,6 +43,7 @@ export default function SpareParts() {
       const payload = {
         ...form,
         quantity: Number(form.quantity) || 0,
+        minimumStock: Number(form.minimumStock) || 0,
       }
 
       if (editing) {
@@ -86,6 +87,7 @@ export default function SpareParts() {
     { key: 'name', label: 'Nome' },
     { key: 'code', label: 'Codice', render: (row) => row.code || '—' },
     { key: 'quantity', label: 'Disponibilità', render: (row) => row.quantity ?? 0 },
+    { key: 'minimumStock', label: 'Soglia minima', render: (row) => row.minimumStock ?? 0 },
     { key: 'description', label: 'Descrizione', render: (row) => row.description || '—' },
     {
       key: 'status',
@@ -102,7 +104,7 @@ export default function SpareParts() {
       label: '',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <button onClick={() => { setEditing(row); setForm({ name: row.name, code: row.code || '', description: row.description || '', quantity: row.quantity ?? 0, notes: row.notes || '' }) }} className="p-1.5 rounded hover:bg-slate-700 text-primary-400 transition-colors">
+          <button onClick={() => { setEditing(row); setForm({ name: row.name, code: row.code || '', description: row.description || '', quantity: row.quantity ?? 0, minimumStock: row.minimumStock ?? 0, notes: row.notes || '' }) }} className="p-1.5 rounded hover:bg-slate-700 text-primary-400 transition-colors">
             <Pencil size={16} />
           </button>
           <button onClick={() => setModal({ type: 'delete', item: row })} className="p-1.5 rounded hover:bg-rose-500/10 text-rose-400 transition-colors">
@@ -134,6 +136,7 @@ export default function SpareParts() {
           <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className={ui.input} placeholder="Nome ricambio" />
           <input value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} className={ui.input} placeholder="Codice articolo (opzionale)" />
           <input type="number" min="0" value={form.quantity} onChange={(e) => setForm((p) => ({ ...p, quantity: e.target.value }))} className={ui.input} placeholder="Disponibilità" />
+          <input type="number" min="0" value={form.minimumStock} onChange={(e) => setForm((p) => ({ ...p, minimumStock: e.target.value }))} className={ui.input} placeholder="Scorta minima" />
           <input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className={ui.input} placeholder="Note (opzionali)" />
         </div>
 

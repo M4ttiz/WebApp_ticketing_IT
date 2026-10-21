@@ -127,6 +127,43 @@ async function getDashboard(req, res, next) {
       .filter((x) => x.category !== '—')
       .sort((a, b) => b.count - a.count);
 
+    const sparePartsDateWhere = rangeStart && rangeEnd ? `AND t.created_at BETWEEN '${rangeStart.toISOString()}' AND '${rangeEnd.toISOString()}'` : `AND t.created_at >= '${sevenDaysAgo.toISOString()}'`;
+    const sparePartsStatusWhere = statusIn ? `AND t.status IN (${statusIn.map((s) => `'${s}'`).join(',')})` : '';
+    const sparePartsAssigneeWhere = normalizedRole === 'technician' ? `AND t.assignee_id = '${userId}'` : '';
+
+    const mostUsedSpareParts = await prisma.$queryRawUnsafe(`
+      SELECT
+        sp.id,
+        sp.name,
+        sp.code,
+        SUM(tsp.quantity)::int AS used_quantity
+      FROM ticket_spare_parts tsp
+      JOIN spare_parts sp ON sp.id = tsp.spare_part_id
+      JOIN tickets t ON t.id = tsp.ticket_id
+      WHERE sp.is_active = true
+        ${sparePartsDateWhere}
+        ${sparePartsStatusWhere}
+        ${sparePartsAssigneeWhere}
+      GROUP BY sp.id, sp.name, sp.code
+      ORDER BY used_quantity DESC, sp.name ASC
+      LIMIT 10
+    `);
+
+    const lowStockSpareParts = await prisma.$queryRawUnsafe(`
+      SELECT
+        sp.id,
+        sp.name,
+        sp.code,
+        sp.quantity,
+        COALESCE(sp.minimum_stock, 0)::int AS minimum_stock,
+        (COALESCE(sp.minimum_stock, 0) - sp.quantity)::int AS deficit
+      FROM spare_parts sp
+      WHERE sp.is_active = true
+        AND sp.quantity < COALESCE(sp.minimum_stock, 0)
+      ORDER BY deficit DESC, sp.name ASC
+      LIMIT 10
+    `);
+
     // ─── Tickets by day (line chart) ─────
     const ticketsByDayStart = hasMonthYear ? rangeStart : sevenDaysAgo;
     const ticketsByDayEnd = hasMonthYear ? rangeEnd : now;
@@ -186,7 +223,9 @@ async function getDashboard(req, res, next) {
         byStatus: byStatus.map((s) => ({ status: s.status, count: s._count.id })),
         byCategory,
         ticketsByDay,
+        mostUsedSpareParts,
       },
+      lowStockSpareParts,
       topAgents,
       recentTickets,
     });
@@ -206,7 +245,9 @@ async function getDashboard(req, res, next) {
           byStatus: [],
           byCategory: [],
           ticketsByDay: [],
+          mostUsedSpareParts: [],
         },
+        lowStockSpareParts: [],
         topAgents: [],
         recentTickets: [],
       });

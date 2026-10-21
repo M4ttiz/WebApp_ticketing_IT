@@ -2,7 +2,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X } from 'lucide-react'
 
-export default function ConfirmModal({ open, title, message, confirmText = 'Conferma', cancelText = 'Annulla', onConfirm, onCancel, danger }) {
+export default function ConfirmModal({ open, title, message, confirmText = 'Conferma', cancelText = 'Annulla', onConfirm, onCancel, danger, children }) {
   return (
     <AnimatePresence>
       {open && (
@@ -30,6 +30,7 @@ export default function ConfirmModal({ open, title, message, confirmText = 'Conf
               </button>
             </div>
             <div className="px-5 py-4 text-sm text-slate-300">{message}</div>
+            {children && <div className="px-5 pb-4">{children}</div>}
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-700 bg-slate-800/50">
               <button
                 onClick={onCancel}

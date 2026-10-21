@@ -7,6 +7,7 @@ function validateSparePartPayload(data = {}, { allowQuantity = true } = {}) {
   const description = typeof data.description === 'string' ? data.description.trim() : '';
   const notes = typeof data.notes === 'string' ? data.notes.trim() : '';
   const quantity = Number(data.quantity ?? 0);
+  const minimumStock = Number(data.minimumStock ?? data.minimum_stock ?? 0);
 
   if (!name) {
     throw new AppError('Il nome del ricambio è obbligatorio', 400);
@@ -16,13 +17,32 @@ function validateSparePartPayload(data = {}, { allowQuantity = true } = {}) {
     throw new AppError('La quantità disponibile deve essere un numero intero non negativo', 400);
   }
 
+  if (allowQuantity && (!Number.isInteger(minimumStock) || minimumStock < 0)) {
+    throw new AppError('La soglia minima di stock deve essere un numero intero non negativo', 400);
+  }
+
   return {
     name,
     code: code || null,
     description: description || null,
     quantity: allowQuantity ? quantity : 0,
     notes: notes || null,
+    minimumStock: allowQuantity ? minimumStock : 0,
   };
+}
+
+async function applyMinimumStockToSparePart(id, minimumStock) {
+  if (minimumStock === undefined || minimumStock === null) {
+    return null;
+  }
+
+  const parsed = Number(minimumStock);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new AppError('La soglia minima di stock deve essere un numero intero non negativo', 400);
+  }
+
+  await prisma.$executeRawUnsafe(`UPDATE "spare_parts" SET "minimum_stock" = ${parsed} WHERE "id" = '${id}'`);
+  return parsed;
 }
 
 function validateTicketSparePartPayload(data = {}) {
@@ -82,10 +102,32 @@ async function listSpareParts(req, res, next) {
       ];
     }
 
-    const items = await prisma.sparePart.findMany({
-      where,
-      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
-    });
+    const whereSql = [];
+    if (includeInactive !== 'true') {
+      whereSql.push('sp.is_active = true');
+    }
+
+    if (search) {
+      const escaped = String(search).replace(/'/g, "''");
+      whereSql.push(`(LOWER(sp.name) LIKE '%${escaped.toLowerCase()}%' OR LOWER(COALESCE(sp.code, '')) LIKE '%${escaped.toLowerCase()}%' OR LOWER(COALESCE(sp.description, '')) LIKE '%${escaped.toLowerCase()}%')`);
+    }
+
+    const items = await prisma.$queryRawUnsafe(`
+      SELECT
+        sp.id,
+        sp.name,
+        sp.code,
+        sp.description,
+        sp.quantity,
+        sp.notes,
+        sp.is_active AS "isActive",
+        sp.created_at AS "createdAt",
+        sp.updated_at AS "updatedAt",
+        COALESCE(sp.minimum_stock, 0)::int AS "minimumStock"
+      FROM spare_parts sp
+      ${whereSql.length ? `WHERE ${whereSql.join(' AND ')}` : ''}
+      ORDER BY sp.is_active DESC, sp.name ASC
+    `);
 
     res.json(items);
   } catch (error) {
@@ -96,9 +138,25 @@ async function listSpareParts(req, res, next) {
 async function getSparePart(req, res, next) {
   try {
     const { id } = req.params;
-    const item = await prisma.sparePart.findUnique({ where: { id } });
-    if (!item) throw new NotFoundError('Ricambio');
-    res.json(item);
+    const items = await prisma.$queryRawUnsafe(`
+      SELECT
+        sp.id,
+        sp.name,
+        sp.code,
+        sp.description,
+        sp.quantity,
+        sp.notes,
+        sp.is_active AS "isActive",
+        sp.created_at AS "createdAt",
+        sp.updated_at AS "updatedAt",
+        COALESCE(sp.minimum_stock, 0)::int AS "minimumStock"
+      FROM spare_parts sp
+      WHERE sp.id = '${id}'
+      LIMIT 1
+    `);
+
+    if (!items.length) throw new NotFoundError('Ricambio');
+    res.json(items[0]);
   } catch (error) {
     next(error);
   }
@@ -121,8 +179,19 @@ async function createSparePart(req, res, next) {
       throw new AppError('Esiste già un ricambio con lo stesso nome o codice', 409);
     }
 
-    const item = await prisma.sparePart.create({ data: payload });
-    res.status(201).json(item);
+    const item = await prisma.sparePart.create({
+      data: {
+        name: payload.name,
+        code: payload.code,
+        description: payload.description,
+        quantity: payload.quantity,
+        notes: payload.notes,
+        isActive: true,
+      },
+    });
+
+    await applyMinimumStockToSparePart(item.id, payload.minimumStock);
+    res.status(201).json({ ...item, minimumStock: payload.minimumStock });
   } catch (error) {
     next(error);
   }
@@ -135,7 +204,13 @@ async function updateSparePart(req, res, next) {
     if (!existing) throw new NotFoundError('Ricambio');
 
     const payload = validateSparePartPayload(req.body, { allowQuantity: true });
-    const updateData = { ...payload };
+    const updateData = {
+      name: payload.name,
+      code: payload.code,
+      description: payload.description,
+      quantity: payload.quantity,
+      notes: payload.notes,
+    };
 
     if (req.body.isActive !== undefined) {
       updateData.isActive = Boolean(req.body.isActive);
@@ -160,7 +235,14 @@ async function updateSparePart(req, res, next) {
       data: updateData,
     });
 
-    res.json(item);
+    const minimumStock = req.body.minimumStock !== undefined || req.body.minimum_stock !== undefined
+      ? await applyMinimumStockToSparePart(id, req.body.minimumStock ?? req.body.minimum_stock)
+      : Number(existing.quantity ?? 0) >= 0 ? await prisma.$queryRawUnsafe(`SELECT COALESCE("minimum_stock", 0)::int AS "minimumStock" FROM "spare_parts" WHERE "id" = '${id}' LIMIT 1`) : null;
+
+    res.json({
+      ...item,
+      minimumStock: minimumStock && Array.isArray(minimumStock) ? Number(minimumStock[0]?.minimumStock ?? 0) : Number(minimumStock ?? 0),
+    });
   } catch (error) {
     next(error);
   }

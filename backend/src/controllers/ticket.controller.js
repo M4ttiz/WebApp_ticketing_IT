@@ -20,7 +20,7 @@ const ALLOWED_TRANSITIONS = {
 
 const TAKEOVER_ASSET_REQUIRED_MESSAGE = 'Per prendere in carico il ticket è necessario assegnare un asset valido dal catalogo inventario.';
 
-function validateStatusTransition({ ticket, role, userId, targetStatus }) {
+function validateStatusTransition({ ticket, role, userId, targetStatus, resolutionNote }) {
   if (!ticket) throw new NotFoundError('Ticket');
 
   if (role === 'user' && ticket.requesterId !== userId) {
@@ -34,6 +34,11 @@ function validateStatusTransition({ ticket, role, userId, targetStatus }) {
     if (ticket.status !== 'RISOLTO') {
       throw new ForbiddenError('Il ticket deve essere risolto prima di poterlo chiudere');
     }
+  }
+
+  const normalizedNote = typeof resolutionNote === 'string' ? resolutionNote.trim() : '';
+  if (['RISOLTO', 'CHIUSO'].includes(targetStatus) && !normalizedNote) {
+    throw new AppError('Per risolvere o chiudere il ticket è obbligatoria una nota descrittiva', 400);
   }
 
   if (ticket.status === targetStatus) {
@@ -531,6 +536,11 @@ async function changeStatus(req, res, next) {
   try {
     const ticketId = parseInt(req.params.id);
     const { status } = req.body;
+    const resolutionNote = typeof req.body.note === 'string'
+      ? req.body.note
+      : typeof req.body.resolutionNote === 'string'
+        ? req.body.resolutionNote
+        : '';
     const { role, id: userId } = req.user;
 
     const ticket = await prisma.ticket.findUnique({
@@ -540,7 +550,7 @@ async function changeStatus(req, res, next) {
 
     if (!ticket) throw new NotFoundError('Ticket');
 
-    validateStatusTransition({ ticket, role, userId, targetStatus: status });
+    validateStatusTransition({ ticket, role, userId, targetStatus: status, resolutionNote });
 
     if (ticket.status === status) {
       return res.json(ticket);
@@ -568,6 +578,17 @@ async function changeStatus(req, res, next) {
       data: updateData,
       include: ticketIncludes,
     });
+
+    if (resolutionNote && resolutionNote.trim()) {
+      await prisma.ticketMessage.create({
+        data: {
+          ticketId,
+          authorId: userId,
+          content: `Nota di chiusura / risoluzione: ${resolutionNote.trim()}`,
+          isInternal: false,
+        },
+      });
+    }
 
     await createAuditLog(ticketId, userId, 'Stato cambiato', ticket.status, status);
 

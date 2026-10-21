@@ -79,6 +79,7 @@ export default function TicketDetail() {
   const [sparePartCatalog, setSparePartCatalog] = useState([])
   const [sparePartId, setSparePartId] = useState('')
   const [sparePartQty, setSparePartQty] = useState(1)
+  const [statusNote, setStatusNote] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const isAdmin = user?.role === 'admin'
@@ -319,6 +320,13 @@ export default function TicketDetail() {
       }
 
       const payload = { status }
+      if (['RISOLTO', 'CHIUSO'].includes(status)) {
+        const trimmedNote = statusNote.trim()
+        if (!trimmedNote) {
+          throw new Error('Per risolvere o chiudere il ticket è obbligatoria una nota descrittiva.')
+        }
+        payload.note = trimmedNote
+      }
       if (status === 'CHIUSO') {
         payload.usedSpareParts = ticketSpareParts.map((item) => ({
           sparePartId: item.sparePartId,
@@ -329,6 +337,7 @@ export default function TicketDetail() {
       await api.patch(`/tickets/${id}/status`, payload)
       toast.success('Stato aggiornato')
       setStatusModal(null)
+      setStatusNote('')
       await loadTicket()
     } catch (e) {
       const message = e.response?.data?.error || e.message || 'Errore'
@@ -718,9 +727,22 @@ export default function TicketDetail() {
         title={`Conferma cambio stato`}
         message={`Vuoi cambiare lo stato del ticket in "${statusModal?.label}"?`}
         onConfirm={() => changeStatus(statusModal?.value)}
-        onCancel={() => setStatusModal(null)}
+        onCancel={() => { setStatusModal(null); setStatusNote('') }}
         danger={statusModal?.value === 'RIFIUTATO'}
-      />
+      >
+        {statusModal && ['RISOLTO', 'CHIUSO'].includes(statusModal.value) && (
+          <div className="space-y-2">
+            <label className="block text-xs uppercase tracking-wide text-slate-400">Nota obbligatoria</label>
+            <textarea
+              value={statusNote}
+              onChange={(e) => setStatusNote(e.target.value)}
+              rows={3}
+              className={`${ui.textarea} resize-none`}
+              placeholder="Descrivi cosa è stato verificato, la causa e la risoluzione."
+            />
+          </div>
+        )}
+      </ConfirmModal>
 
       <ConfirmModal
         open={confirmDelete}

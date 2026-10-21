@@ -102,6 +102,8 @@ router.patch(
     body('status')
       .notEmpty().withMessage('Stato obbligatorio')
       .isIn(['APERTO', 'IN_LAVORAZIONE', 'IN_ATTESA', 'RISOLTO', 'CHIUSO', 'RIFIUTATO']).withMessage('Stato non valido'),
+    body('note').optional({ nullable: true }).trim().isLength({ min: 5, max: 2000 }).withMessage('La nota di chiusura/risoluzione deve contenere almeno 5 caratteri'),
+    body('resolutionNote').optional({ nullable: true }).trim().isLength({ min: 5, max: 2000 }).withMessage('La nota di chiusura/risoluzione deve contenere almeno 5 caratteri'),
     body('usedSpareParts').optional().isArray().withMessage('Ricambi utilizzati non validi'),
   ],
   validate,
