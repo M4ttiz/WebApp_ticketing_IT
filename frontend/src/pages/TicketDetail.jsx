@@ -9,6 +9,7 @@ import ConfirmModal from '../components/ConfirmModal'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import { getAssets, getAsset, getAssetOptions } from '../api/assets'
+import { getSpareParts, getTicketSpareParts, addTicketSparePart, removeTicketSparePart } from '../api/spareParts'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ui } from '../lib/utils'
@@ -74,6 +75,10 @@ export default function TicketDetail() {
   const [assetCategoryFilter, setAssetCategoryFilter] = useState('')
   const [assetFilterOptions, setAssetFilterOptions] = useState({ categories: [], locations: [], departments: [] })
   const [selectedAsset, setSelectedAsset] = useState(null)
+  const [ticketSpareParts, setTicketSpareParts] = useState([])
+  const [sparePartCatalog, setSparePartCatalog] = useState([])
+  const [sparePartId, setSparePartId] = useState('')
+  const [sparePartQty, setSparePartQty] = useState(1)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const isAdmin = user?.role === 'admin'
@@ -90,12 +95,14 @@ export default function TicketDetail() {
   async function loadTicket() {
     setLoading(true)
     try {
-      const [tRes, mRes] = await Promise.all([
+      const [tRes, mRes, spareRes] = await Promise.all([
         api.get(`/tickets/${id}`),
         api.get(`/tickets/${id}/messages`),
+        getTicketSpareParts(id),
       ])
       setTicket(tRes.data)
       setMessages(mRes.data)
+      setTicketSpareParts(spareRes.data || [])
       setAssigneeId(tRes.data.assigneeId || '')
       const currentAsset = tRes.data.assets?.[0]?.asset || null
       setAssetId(currentAsset?.id || '')
@@ -151,6 +158,7 @@ export default function TicketDetail() {
 
   useEffect(() => {
     loadTicket()
+    refreshSparePartsCatalog()
     loadAssetFilters()
     if (isAdmin) {
       api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
@@ -214,6 +222,54 @@ export default function TicketDetail() {
     setAssetResults([])
   }
 
+  async function refreshSparePartsCatalog() {
+    try {
+      const res = await getSpareParts({ includeInactive: true })
+      setSparePartCatalog(res.data || [])
+    } catch (e) {
+      setSparePartCatalog([])
+    }
+  }
+
+  async function saveTicketSparePart() {
+    if (!sparePartId) {
+      toast.error('Seleziona un ricambio da associare al ticket')
+      return
+    }
+
+    const parsedQty = Number(sparePartQty)
+    if (!Number.isInteger(parsedQty) || parsedQty <= 0) {
+      toast.error('La quantità deve essere un numero intero maggiore di zero')
+      return
+    }
+
+    try {
+      const res = await addTicketSparePart(id, { sparePartId, quantity: parsedQty })
+      setTicketSpareParts((p) => {
+        const existing = p.find((item) => item.sparePartId === res.data.sparePartId)
+        if (existing) {
+          return p.map((item) => item.sparePartId === res.data.sparePartId ? res.data : item)
+        }
+        return [res.data, ...p]
+      })
+      setSparePartId('')
+      setSparePartQty(1)
+      toast.success('Ricambio associato al ticket')
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Errore nell’associazione del ricambio')
+    }
+  }
+
+  async function deleteTicketSparePart(sparePartIdToDelete) {
+    try {
+      await removeTicketSparePart(id, sparePartIdToDelete)
+      setTicketSpareParts((p) => p.filter((item) => item.sparePartId !== sparePartIdToDelete))
+      toast.success('Ricambio rimosso dal ticket')
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Errore nella rimozione del ricambio')
+    }
+  }
+
   async function sendComment() {
     if (!content.trim()) return
     if (isClosed) {
@@ -234,17 +290,49 @@ export default function TicketDetail() {
     }
   }
 
+  async function handleTakeOver() {
+    if (!isAgent || ticket.assigneeId) return
+
+    const selectedAssetId = selectedAsset?.id || assetId || ticket.assets?.[0]?.asset?.id || null
+    if (!selectedAssetId) {
+      toast.error('Per prendere in carico il ticket è necessario assegnare un asset valido dal catalogo inventario.')
+      return
+    }
+
+    try {
+      await api.post(`/tickets/${id}/assign`, { assetId: selectedAssetId })
+      toast.success('Ticket preso in carico')
+      await loadTicket()
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Impossibile prendere in carico il ticket')
+    }
+  }
+
   async function changeStatus(status) {
     try {
       if (status === 'IN_LAVORAZIONE' && isAgent && !ticket.assigneeId) {
-        await api.post(`/tickets/${id}/assign`, { assetId: assetId || null })
+        const selectedAssetId = selectedAsset?.id || assetId || ticket.assets?.[0]?.asset?.id || null
+        if (!selectedAssetId) {
+          throw new Error('Per prendere in carico il ticket è necessario assegnare un asset valido dal catalogo inventario.')
+        }
+        await api.post(`/tickets/${id}/assign`, { assetId: selectedAssetId })
       }
-      await api.patch(`/tickets/${id}/status`, { status })
+
+      const payload = { status }
+      if (status === 'CHIUSO') {
+        payload.usedSpareParts = ticketSpareParts.map((item) => ({
+          sparePartId: item.sparePartId,
+          quantity: Number(item.quantity) || 0,
+        }))
+      }
+
+      await api.patch(`/tickets/${id}/status`, payload)
       toast.success('Stato aggiornato')
       setStatusModal(null)
-      loadTicket()
+      await loadTicket()
     } catch (e) {
-      toast.error(e.response?.data?.error || 'Errore')
+      const message = e.response?.data?.error || e.message || 'Errore'
+      toast.error(message)
     }
   }
 
@@ -313,7 +401,15 @@ export default function TicketDetail() {
         {/* Actions */}
         {isAgent && (
           <div className="flex flex-wrap gap-2">
-            {availableTransitions.map((t) => (
+            {!ticket.assigneeId && ticket.status === 'APERTO' && (
+              <button
+                onClick={handleTakeOver}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors"
+              >
+                <UserCheck size={16} /> Prendi in carico
+              </button>
+            )}
+            {availableTransitions.filter((t) => !(ticket.status === 'APERTO' && !ticket.assigneeId && t.value === 'IN_LAVORAZIONE')).map((t) => (
               <button
                 key={t.value}
                 onClick={() => setStatusModal(t)}
@@ -334,6 +430,20 @@ export default function TicketDetail() {
           </button>
         )}
       </div>
+
+      {isAgent && !ticket.assigneeId && ticket.status === 'APERTO' && (
+        <div className={`${ui.cardSection} border-amber-500/30 bg-amber-500/5`}>
+          <div className="flex items-start gap-3">
+            <UserCheck size={18} className="text-amber-400 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium text-amber-200">Presa in carico richiesta</div>
+              <p className="mt-1 text-sm text-slate-300">
+                Per prendere in carico questo ticket è necessario associare un asset valido dal catalogo inventario.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin assign */}
       {isAgent && (
@@ -537,6 +647,41 @@ export default function TicketDetail() {
                   <Briefcase size={15} className="text-primary-400" />
                   <span>Reparto: {detailedLinkedAsset.assignedTo || detailedLinkedAsset.department || detailedLinkedAsset.reparto || '-'}</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {isAgent && (
+            <div className={ui.cardSection}>
+              <h3 className="font-semibold text-sm mb-4">Pezzi di ricambio utilizzati</h3>
+
+              {ticketSpareParts.length === 0 ? (
+                <p className="text-sm text-slate-400">Nessun ricambio registrato per questo ticket.</p>
+              ) : (
+                <div className="space-y-2">
+                  {ticketSpareParts.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2">
+                      <div>
+                        <div className="text-sm font-medium text-slate-100">{item.sparePart?.name || 'Ricambio'}</div>
+                        <div className="text-xs text-slate-400">Quantità: {item.quantity}</div>
+                      </div>
+                      <button onClick={() => deleteTicketSparePart(item.sparePartId)} className="text-xs text-rose-400 hover:text-rose-300">Rimuovi</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-[1.3fr_0.7fr_auto]">
+                <select value={sparePartId} onChange={(e) => setSparePartId(e.target.value)} className={ui.select}>
+                  <option value="">Seleziona ricambio</option>
+                  {sparePartCatalog.filter((part) => part.isActive !== false).map((part) => (
+                    <option key={part.id} value={part.id}>{part.name} {part.code ? `(${part.code})` : ''}</option>
+                  ))}
+                </select>
+                <input type="number" min="1" value={sparePartQty} onChange={(e) => setSparePartQty(Math.max(1, Number(e.target.value) || 1))} className={ui.input} />
+                <button onClick={saveTicketSparePart} className="px-3 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors">
+                  Aggiungi
+                </button>
               </div>
             </div>
           )}

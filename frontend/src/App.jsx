@@ -14,6 +14,7 @@ import Categories from './pages/Categories'
 import InventoryV2 from './pages/InventoryV2'
 import AssetDetail from './pages/AssetDetail'
 import AssetTicketsDashboard from './pages/AssetTicketsDashboard'
+import SpareParts from './pages/SpareParts'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
@@ -67,6 +68,7 @@ function App() {
               {/* Legacy inventory page kept in pages/Inventory.jsx */}
               <Route path="/inventory" element={<InventoryV2 />} />
               <Route path="/inventory/:id" element={<AssetDetail />} />
+              <Route path="/spare-parts" element={<SpareParts />} />
             </Route>
             <Route element={<ProtectedRoute roles={['admin', 'viewer']} />}>
               <Route path="/asset-tickets" element={<AssetTicketsDashboard />} />

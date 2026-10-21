@@ -102,6 +102,7 @@ router.patch(
     body('status')
       .notEmpty().withMessage('Stato obbligatorio')
       .isIn(['APERTO', 'IN_LAVORAZIONE', 'IN_ATTESA', 'RISOLTO', 'CHIUSO', 'RIFIUTATO']).withMessage('Stato non valido'),
+    body('usedSpareParts').optional().isArray().withMessage('Ricambi utilizzati non validi'),
   ],
   validate,
   ticketController.changeStatus

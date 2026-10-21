@@ -23,6 +23,7 @@ const navItems = [
   { to: '/settings', label: 'Impostazioni', icon: Settings, roles: ['admin'] },
   { to: '/settings/asset-categories', label: 'Categorie Asset', icon: Tags, roles: ['admin'] },
   { to: '/inventory', label: 'Inventario IT', icon: Server, roles: ['admin', 'technician'] },
+  { to: '/spare-parts', label: 'Pezzi di ricambio', icon: Tags, roles: ['admin', 'technician'] },
   { to: '/asset-tickets', label: 'Ticket per Asset', icon: BarChart3, roles: ['admin', 'viewer'] },
 ]
 

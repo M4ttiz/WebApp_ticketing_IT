@@ -18,6 +18,157 @@ const ALLOWED_TRANSITIONS = {
   RIFIUTATO: [],
 };
 
+const TAKEOVER_ASSET_REQUIRED_MESSAGE = 'Per prendere in carico il ticket è necessario assegnare un asset valido dal catalogo inventario.';
+
+function validateStatusTransition({ ticket, role, userId, targetStatus }) {
+  if (!ticket) throw new NotFoundError('Ticket');
+
+  if (role === 'user' && ticket.requesterId !== userId) {
+    throw new ForbiddenError();
+  }
+
+  if (role === 'user') {
+    if (targetStatus !== 'CHIUSO') {
+      throw new ForbiddenError('Puoi solo chiudere un ticket risolto');
+    }
+    if (ticket.status !== 'RISOLTO') {
+      throw new ForbiddenError('Il ticket deve essere risolto prima di poterlo chiudere');
+    }
+  }
+
+  if (ticket.status === targetStatus) {
+    return { allowed: true };
+  }
+
+  const allowed = ALLOWED_TRANSITIONS[ticket.status] || [];
+  if (!allowed.includes(targetStatus)) {
+    throw new AppError(`Transizione non permessa da ${ticket.status} a ${targetStatus}`, 400);
+  }
+
+  return { allowed: true };
+}
+
+async function validateTicketTakeover({
+  ticket,
+  user,
+  assetId,
+  assetLookup = async (id) => prisma.asset.findUnique({
+    where: { id },
+    select: { id: true, name: true, status: true, assignedUserId: true },
+  }),
+}) {
+  if (!ticket) throw new NotFoundError('Ticket');
+
+  if (user?.role === 'user') {
+    throw new ForbiddenError('Non hai i permessi per prendere in carico il ticket');
+  }
+
+  const currentAssetId = ticket.assets?.[0]?.assetId || ticket.assets?.[0]?.asset?.id || null;
+  const resolvedAssetId = assetId !== undefined && assetId !== null && assetId !== '' ? assetId : currentAssetId;
+
+  if (!resolvedAssetId) {
+    throw new AppError(TAKEOVER_ASSET_REQUIRED_MESSAGE, 400);
+  }
+
+  const asset = await assetLookup(resolvedAssetId);
+  if (!asset) {
+    throw new NotFoundError('Asset');
+  }
+
+  return { assetId: resolvedAssetId, asset };
+}
+
+function normalizeUsedSpareParts(rawParts = []) {
+  if (!Array.isArray(rawParts)) {
+    throw new AppError('Lista ricambi utilizzati non valida', 400);
+  }
+
+  return rawParts.map((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      throw new AppError('Ricambio non valido', 400);
+    }
+
+    const sparePartId = typeof entry.sparePartId === 'string' ? entry.sparePartId.trim() : '';
+    const quantity = Number(entry.quantity ?? 0);
+
+    if (!sparePartId) {
+      throw new AppError('ID ricambio obbligatorio', 400);
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new AppError('Quantità ricambio non valida', 400);
+    }
+
+    return { sparePartId, quantity };
+  });
+}
+
+async function reserveUsedSpareParts(ticketId, usedParts) {
+  const normalized = normalizeUsedSpareParts(usedParts);
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    include: { spareParts: { include: { sparePart: true } } },
+  });
+
+  if (!ticket) throw new NotFoundError('Ticket');
+
+  const currentByPart = new Map(ticket.spareParts.map((item) => [item.sparePartId, item.quantity]));
+
+  for (const item of normalized) {
+    const sparePart = await prisma.sparePart.findUnique({ where: { id: item.sparePartId } });
+    if (!sparePart) throw new NotFoundError('Ricambio');
+    if (!sparePart.isActive) {
+      throw new AppError(`Il ricambio "${sparePart.name}" è stato disattivato`, 400);
+    }
+
+    const previous = currentByPart.get(item.sparePartId) || 0;
+    const delta = item.quantity - previous;
+
+    if (delta > 0 && sparePart.quantity < delta) {
+      throw new AppError(`Giacenza insufficiente per "${sparePart.name}"`, 400);
+    }
+
+    const updatedQuantity = sparePart.quantity - delta;
+    if (delta > 0) {
+      await prisma.sparePart.update({
+        where: { id: sparePart.id },
+        data: { quantity: updatedQuantity },
+      });
+    }
+
+    await prisma.ticketSparePart.upsert({
+      where: {
+        ticketId_sparePartId: {
+          ticketId,
+          sparePartId: item.sparePartId,
+        },
+      },
+      create: {
+        ticketId,
+        sparePartId: item.sparePartId,
+        quantity: item.quantity,
+      },
+      update: { quantity: item.quantity },
+    });
+  }
+}
+
+async function restoreTicketSpareParts(ticketId) {
+  const usages = await prisma.ticketSparePart.findMany({
+    where: { ticketId },
+    include: { sparePart: true },
+  });
+
+  for (const usage of usages) {
+    await prisma.sparePart.update({
+      where: { id: usage.sparePartId },
+      data: {
+        quantity: usage.sparePart.quantity + usage.quantity,
+      },
+    });
+  }
+}
+
 // ─── Shared includes for ticket queries ────
 const ticketIncludes = {
   category: { select: { id: true, name: true } },
@@ -294,6 +445,11 @@ async function getTicket(req, res, next) {
             },
           },
         },
+        spareParts: {
+          include: {
+            sparePart: true,
+          },
+        },
         attachments: {
           include: { uploader: { select: { id: true, firstName: true, lastName: true } } },
           orderBy: { createdAt: 'asc' },
@@ -379,33 +535,25 @@ async function changeStatus(req, res, next) {
 
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
-      include: { requester: true, assignee: true },
+      include: { requester: true, assignee: true, assets: { select: { assetId: true } }, spareParts: { include: { sparePart: true } } },
     });
 
     if (!ticket) throw new NotFoundError('Ticket');
 
-    if (role === 'user' && ticket.requesterId !== userId) {
-      throw new ForbiddenError();
-    }
+    validateStatusTransition({ ticket, role, userId, targetStatus: status });
 
-    // Users can only close their own resolved tickets
-    if (role === 'user') {
-      if (status !== 'CHIUSO') {
-        throw new ForbiddenError('Puoi solo chiudere un ticket risolto');
-      }
-      if (ticket.status !== 'RISOLTO') {
-        throw new ForbiddenError('Il ticket deve essere risolto prima di poterlo chiudere');
-      }
-    }
-
-    // State machine validation
     if (ticket.status === status) {
       return res.json(ticket);
     }
 
-    const allowed = ALLOWED_TRANSITIONS[ticket.status] || [];
-    if (!allowed.includes(status)) {
-      throw new AppError(`Transizione non permessa da ${ticket.status} a ${status}`, 400);
+    const usedSpareParts = Array.isArray(req.body.usedSpareParts) ? req.body.usedSpareParts : [];
+
+    if (status === 'CHIUSO') {
+      await reserveUsedSpareParts(ticketId, usedSpareParts);
+    }
+
+    if (ticket.status === 'CHIUSO' && status !== 'CHIUSO') {
+      await restoreTicketSpareParts(ticketId);
     }
 
     const updateData = { status };
@@ -455,7 +603,7 @@ async function assignTicket(req, res, next) {
 
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
-      include: { requester: true },
+      include: { requester: true, assets: true },
     });
 
     if (!ticket) throw new NotFoundError('Ticket');
@@ -476,6 +624,15 @@ async function assignTicket(req, res, next) {
       updateData.assigneeId = assigneeId;
       if (ticket.status === 'APERTO') {
         updateData.status = 'IN_LAVORAZIONE';
+      }
+
+      if (updateData.status === 'IN_LAVORAZIONE' || (ticket.status === 'IN_LAVORAZIONE' && updateData.assigneeId)) {
+        const takeover = await validateTicketTakeover({
+          ticket,
+          user: req.user,
+          assetId,
+        });
+        await linkAssetToTicket(ticketId, takeover.assetId);
       }
 
       await createAuditLog(ticketId, userId, 'Ticket assegnato', oldAssignee || 'Nessuno', `${assignee.firstName} ${assignee.lastName}`);
@@ -501,7 +658,9 @@ async function assignTicket(req, res, next) {
       include: ticketIncludes,
     });
 
-    await linkAssetToTicket(ticketId, assetId === undefined ? undefined : (assetId || null));
+    if (assigneeId === null || assigneeId === undefined) {
+      await linkAssetToTicket(ticketId, assetId === undefined ? undefined : (assetId || null));
+    }
 
     res.json(updated);
   } catch (error) {
@@ -519,7 +678,10 @@ async function selfAssignTicket(req, res, next) {
     const userId = req.user.id;
     const { assetId } = req.body;
 
-    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { assets: true },
+    });
     if (!ticket) {
       throw new NotFoundError('Ticket');
     }
@@ -527,6 +689,12 @@ async function selfAssignTicket(req, res, next) {
     if (ticket.assigneeId) {
       throw new AppError('Questo ticket è già assegnato', 400);
     }
+
+    const { assetId: resolvedAssetId } = await validateTicketTakeover({
+      ticket,
+      user: req.user,
+      assetId,
+    });
 
     const updated = await prisma.ticket.update({
       where: { id: ticketId },
@@ -537,7 +705,7 @@ async function selfAssignTicket(req, res, next) {
       include: ticketIncludes,
     });
 
-    await linkAssetToTicket(ticketId, assetId === undefined ? undefined : (assetId || null));
+    await linkAssetToTicket(ticketId, resolvedAssetId);
     await createAuditLog(ticketId, userId, 'Ticket preso in carico', 'Nessuno', `${req.user.firstName} ${req.user.lastName}`);
 
     res.json(updated);
@@ -767,6 +935,13 @@ async function deleteTicket(req, res, next) {
 }
 
 module.exports = {
+  ALLOWED_TRANSITIONS,
+  TAKEOVER_ASSET_REQUIRED_MESSAGE,
+  validateTicketTakeover,
+  validateStatusTransition,
+  normalizeUsedSpareParts,
+  reserveUsedSpareParts,
+  restoreTicketSpareParts,
   listTickets,
   createTicket,
   getTicket,

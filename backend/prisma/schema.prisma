@@ -101,6 +101,7 @@ model Ticket {
   attachments Attachment[]
   auditLogs   AuditLog[]
   assets      TicketAsset[]
+  spareParts  TicketSparePart[]
 
   @@index([status])
   @@index([priority])
@@ -294,4 +295,39 @@ model TicketAsset {
   @@index([ticketId])
   @@index([assetId])
   @@map("ticket_assets")
+}
+
+model SparePart {
+  id          String            @id @default(uuid())
+  name        String            @db.VarChar(255)
+  code        String?           @db.VarChar(100)
+  description String?           @db.Text
+  quantity    Int               @default(0) @map("quantity")
+  notes       String?           @db.Text
+  isActive    Boolean           @default(true) @map("is_active")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  ticketUsages TicketSparePart[]
+
+  @@index([name])
+  @@index([isActive])
+  @@map("spare_parts")
+}
+
+model TicketSparePart {
+  id          String     @id @default(uuid())
+  ticketId    Int        @map("ticket_id")
+  sparePartId String     @map("spare_part_id") @db.VarChar(36)
+  quantity    Int        @default(1)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  ticket    Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sparePart SparePart  @relation(fields: [sparePartId], references: [id], onDelete: Restrict)
+
+  @@unique([ticketId, sparePartId])
+  @@index([ticketId])
+  @@index([sparePartId])
+  @@map("ticket_spare_parts")
 }
