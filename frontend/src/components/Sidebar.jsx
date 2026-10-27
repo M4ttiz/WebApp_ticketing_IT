@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   LogOut,
+  CalendarClock,
 } from 'lucide-react'
 
 const navItems = [
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/tickets', label: 'Ticket', icon: Ticket, roles: ['admin', 'technician', 'user'] },
   { to: '/users', label: 'Utenti', icon: Users, roles: ['admin'] },
   { to: '/categories', label: 'Categorie', icon: FolderKanban, roles: ['admin'] },
+  { to: '/recurring-tickets', label: 'Ticket periodici', icon: CalendarClock, roles: ['admin', 'technician'] },
   { to: '/settings', label: 'Impostazioni', icon: Settings, roles: ['admin'] },
   { to: '/settings/asset-categories', label: 'Categorie Asset', icon: Tags, roles: ['admin'] },
   { to: '/inventory', label: 'Inventario IT', icon: Server, roles: ['admin', 'technician'] },

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import api from '../api/axios'
 import KpiCard from '../components/KpiCard'
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton'
 import StatusBadge from '../components/StatusBadge'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { Inbox, Clock, CheckCircle2, Timer, BarChart3, TrendingUp } from 'lucide-react'
+import { Inbox, Clock, CheckCircle2, PauseCircle, BarChart3, TrendingUp } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useAuth } from '../context/AuthContext'
@@ -72,10 +72,16 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            <KpiCard title="Ticket aperti" value={kpi.totalOpen} icon={Inbox} colorClass="text-blue-400" delay={0} />
-            <KpiCard title="In lavorazione" value={kpi.inProgress} icon={Clock} colorClass="text-orange-400" delay={0.1} />
+            <Link to="/tickets?status=APERTO" className="block rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400" aria-label="Mostra i ticket aperti">
+              <KpiCard title="Ticket aperti" value={kpi.totalOpen} icon={Inbox} colorClass="text-blue-400" delay={0} />
+            </Link>
+            <Link to="/tickets?status=IN_LAVORAZIONE" className="block rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400" aria-label="Mostra i ticket in lavorazione">
+              <KpiCard title="In lavorazione" value={kpi.inProgress} icon={Clock} colorClass="text-orange-400" delay={0.1} />
+            </Link>
             <KpiCard title="Risolti oggi" value={kpi.resolvedToday} icon={CheckCircle2} colorClass="text-green-400" delay={0.2} />
-            <KpiCard title="Tempo medio (h)" value={kpi.avgResolutionHours} icon={Timer} colorClass="text-purple-400" delay={0.3} />
+            <Link to="/tickets?status=IN_ATTESA" className="block rounded-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400" aria-label="Mostra i ticket in attesa">
+              <KpiCard title="In attesa" value={kpi.onHold} icon={PauseCircle} colorClass="text-purple-400" delay={0.3} />
+            </Link>
           </>
         )}
       </div>

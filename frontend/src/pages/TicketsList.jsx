@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
 import DataTable from '../components/DataTable'
 import StatusBadge from '../components/StatusBadge'
@@ -27,10 +27,14 @@ const PRIORITY_OPTIONS = [
 ]
 
 export default function TicketsList() {
+  const [searchParams] = useSearchParams()
+  const initialStatus = STATUS_OPTIONS.some((option) => option.value === searchParams.get('status'))
+    ? searchParams.get('status')
+    : ''
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
-    status: '',
+    status: initialStatus,
     priority: '',
     categoryId: '',
     assignedTo: '',

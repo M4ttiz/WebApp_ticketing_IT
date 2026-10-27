@@ -55,6 +55,7 @@ app.use('/api/upload', require('./routes/upload.routes'));
 app.use('/api/notifications', require('./routes/notification.routes'));
 app.use('/api/assets', require('./routes/assets'));
 app.use('/api/spare-parts', require('./routes/sparePart.routes'));
+app.use('/api/recurring-tickets', require('./routes/recurringTicket.routes'));
 
 // ─── Health Check ──────────────────────────
 app.get('/api/health', (req, res) => {
@@ -118,6 +119,7 @@ app.use((req, res) => {
 
 // ─── Start Server ──────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
+  require('./services/recurringTicket.service').startRecurringTicketScheduler();
   // #region agent log
   fetch('http://127.0.0.1:7715/ingest/c0d27ced-16c6-45ed-94f5-165834a5a336',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d042ee'},body:JSON.stringify({sessionId:'d042ee',runId:'pre-fix',hypothesisId:'H1',location:'server.js:119',message:'Backend server startup callback',data:{port:PORT,nodeEnv:process.env.NODE_ENV||'development'},timestamp:Date.now()})}).catch(()=>{});
   // #endregion

@@ -36,6 +36,12 @@ enum TicketStatus {
   RIFIUTATO
 }
 
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 // ─── Models ────────────────────────────────
 
 model User {
@@ -61,6 +67,7 @@ model User {
   auditLogs        AuditLog[]
   notifications    Notification[]
   assets           Asset[]
+  recurringTickets RecurringTicket[]
 
   @@map("users")
 }
@@ -73,6 +80,7 @@ model Category {
   createdAt   DateTime @default(now()) @map("created_at")
 
   tickets Ticket[]
+  recurringTickets RecurringTicket[]
 
   @@map("categories")
 }
@@ -101,13 +109,42 @@ model Ticket {
   assets              TicketAsset[]
   spareParts          TicketSparePart[]
   sparePartMovements SparePartStockMovement[]
+  recurringTemplateId Int? @map("recurring_template_id")
+  occurrenceAt DateTime? @map("occurrence_at")
+  recurringTemplate RecurringTicket? @relation(fields: [recurringTemplateId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([priority])
   @@index([requesterId])
   @@index([assigneeId])
   @@index([categoryId])
+  @@unique([recurringTemplateId, occurrenceAt])
   @@map("tickets")
+}
+
+model RecurringTicket {
+  id          Int                 @id @default(autoincrement())
+  title       String              @db.VarChar(255)
+  description String              @db.Text
+  categoryId  Int                 @map("category_id")
+  priority    Priority            @default(MEDIA)
+  frequency   RecurrenceFrequency
+  dayOfWeek   Int?                @map("day_of_week")
+  dayOfMonth  Int?                @map("day_of_month")
+  time        String              @db.VarChar(5)
+  timeZone    String              @default("Europe/Rome") @map("time_zone") @db.VarChar(64)
+  nextRunAt   DateTime            @map("next_run_at")
+  isActive    Boolean             @default(true) @map("is_active")
+  requesterId String              @map("requester_id")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  category  Category @relation(fields: [categoryId], references: [id])
+  requester User     @relation(fields: [requesterId], references: [id])
+  tickets   Ticket[]
+
+  @@index([isActive, nextRunAt])
+  @@map("recurring_tickets")
 }
 
 model TicketMessage {
