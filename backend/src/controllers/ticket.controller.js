@@ -715,17 +715,21 @@ async function selfAssignTicket(req, res, next) {
       assetId,
     });
 
-    const updated = await prisma.ticket.update({
-      where: { id: ticketId },
+    const claimed = await prisma.ticket.updateMany({
+      where: { id: ticketId, assigneeId: null },
       data: {
         assigneeId: userId,
         status: ticket.status === 'APERTO' ? 'IN_LAVORAZIONE' : ticket.status,
       },
-      include: ticketIncludes,
     });
+    if (claimed.count !== 1) {
+      throw new AppError('Questo ticket è già stato preso in carico da un altro operatore', 409);
+    }
 
     await linkAssetToTicket(ticketId, resolvedAssetId);
     await createAuditLog(ticketId, userId, 'Ticket preso in carico', 'Nessuno', `${req.user.firstName} ${req.user.lastName}`);
+
+    const updated = await prisma.ticket.findUnique({ where: { id: ticketId }, include: ticketIncludes });
 
     res.json(updated);
   } catch (error) {

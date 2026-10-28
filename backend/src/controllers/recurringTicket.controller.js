@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { nextOccurrence } = require('../services/recurringTicket.service');
+const { AppError } = require('../utils/errors');
 
 async function list(req, res, next) {
   try {
@@ -28,18 +29,32 @@ async function update(req, res, next) {
       return res.json(await prisma.recurringTicket.update({ where: { id }, data: { isActive: req.body.isActive } }));
     }
     const { title, description, categoryId, priority, frequency, dayOfWeek, dayOfMonth, time } = req.body;
+    const nextFrequency = frequency ?? current.frequency;
     const rule = {
-      frequency: frequency ?? current.frequency,
-      dayOfWeek: frequency ? (dayOfWeek ?? null) : current.dayOfWeek,
-      dayOfMonth: frequency ? (dayOfMonth ?? null) : current.dayOfMonth,
-      time: time ?? current.time, timeZone: current.timeZone,
+      frequency: nextFrequency,
+      dayOfWeek: nextFrequency === 'WEEKLY'
+        ? (dayOfWeek !== undefined ? Number(dayOfWeek) : current.dayOfWeek)
+        : null,
+      dayOfMonth: nextFrequency === 'MONTHLY'
+        ? (dayOfMonth !== undefined ? Number(dayOfMonth) : current.dayOfMonth)
+        : null,
+      time: time ?? current.time,
+      timeZone: current.timeZone,
     };
+    if (rule.frequency === 'WEEKLY' && rule.dayOfWeek === null) {
+      throw new AppError('Seleziona il giorno della settimana', 400);
+    }
+    if (rule.frequency === 'MONTHLY' && rule.dayOfMonth === null) {
+      throw new AppError('Seleziona il giorno del mese', 400);
+    }
+    const scheduleChanged = frequency !== undefined || dayOfWeek !== undefined
+      || dayOfMonth !== undefined || time !== undefined;
     const data = {
       ...(title !== undefined && { title: title.trim() }),
       ...(description !== undefined && { description: description.trim() }),
       ...(categoryId !== undefined && { categoryId: Number(categoryId) }),
       ...(priority !== undefined && { priority }), ...rule,
-      nextRunAt: nextOccurrence(rule),
+      ...(scheduleChanged && { nextRunAt: nextOccurrence(rule) }),
     };
     res.json(await prisma.recurringTicket.update({ where: { id }, data, include: { category: { select: { id: true, name: true } } } }));
   } catch (error) { next(error); }

@@ -64,8 +64,6 @@ export default function TicketDetail() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [statusModal, setStatusModal] = useState(null)
-  const [agents, setAgents] = useState([])
-  const [assigneeId, setAssigneeId] = useState('')
   const [assetId, setAssetId] = useState('')
   const [assetSearch, setAssetSearch] = useState('')
   const [assetResults, setAssetResults] = useState([])
@@ -88,9 +86,6 @@ export default function TicketDetail() {
 
   useEffect(() => {
     loadTicket()
-    if (isAdmin) {
-      api.get('/users?role=technician&limit=100').then((r) => setAgents(r.data.users)).catch(() => {})
-    }
   }, [id])
 
   async function loadTicket() {
@@ -104,7 +99,6 @@ export default function TicketDetail() {
       setTicket(tRes.data)
       setMessages(mRes.data)
       setTicketSpareParts(spareRes.data || [])
-      setAssigneeId(tRes.data.assigneeId || '')
       const currentAsset = tRes.data.assets?.[0]?.asset || null
       setAssetId(currentAsset?.id || '')
       if (currentAsset?.id) {
@@ -345,16 +339,6 @@ export default function TicketDetail() {
     }
   }
 
-  async function assign() {
-    try {
-      await api.patch(`/tickets/${id}/assign`, { assigneeId: assigneeId || null, assetId: assetId || null })
-      toast.success('Assegnazione aggiornata')
-      loadTicket()
-    } catch (e) {
-      toast.error(e.response?.data?.error || 'Errore')
-    }
-  }
-
   async function openAttachment(att) {
     try {
       const res = await api.get(`/upload/${att.filename}`, { responseType: 'blob' })
@@ -459,22 +443,7 @@ export default function TicketDetail() {
         <div className={`${ui.cardSection} flex flex-col items-start gap-3`}>
           <UserCheck size={18} className="text-primary-400 shrink-0" />
           <div className="w-full space-y-3">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-              {isAdmin && (
-                <div>
-                  <span className="text-sm font-medium">Assegna a:</span>
-                  <select
-                    value={assigneeId}
-                    onChange={(e) => setAssigneeId(e.target.value)}
-                    className={`${ui.select} mt-1`}
-                  >
-                    <option value="">Non assegnato</option>
-                    {agents.map((a) => (
-                      <option key={a.id} value={a.id}>{a.firstName} {a.lastName}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
                 <span className="text-sm font-medium">Filtro sede</span>
                 <select
@@ -576,14 +545,6 @@ export default function TicketDetail() {
               </button>
             </div>
           </div>
-          {isAdmin && (
-            <button
-              onClick={assign}
-              className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              Salva assegnazione
-            </button>
-          )}
         </div>
       )}
 
